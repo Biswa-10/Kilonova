@@ -52,7 +52,6 @@ class LightCurve:
 
     def plot_light_curve(self, color_band_dict, band=None, start_date=None, end_date=None, plot_points=False):
 
-        print(plot_points)
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(1, 1, 1)
 
