@@ -50,8 +50,9 @@ class LightCurve:
 
         return points_of_maximum, dates_of_maximum
 
-    def plot_light_curve(self, color_band_dict, band=None, start_date=None, end_date=None, points=False):
+    def plot_light_curve(self, color_band_dict, band=None, start_date=None, end_date=None, plot_points=False):
 
+        print(plot_points)
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(1, 1, 1)
 
@@ -75,7 +76,7 @@ class LightCurve:
 
                 df_plot_data = self.df[index]
 
-                if points == True:
+                if plot_points == True:
                     ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                 df_plot_data[self.brightness_err_col_name],
                                 color=color_band_dict[band], fmt='o',
@@ -111,7 +112,7 @@ class LightCurve:
                     data_points_found = 1
                     df_plot_data = self.df[index]
 
-                    if points == True:
+                    if plot_points == True:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
                                     color=color_band_dict[band], label=pb_name, fmt='o')
@@ -184,7 +185,7 @@ class LightCurve:
         priority_regions.sort(reverse=True, key=find_len)
         return priority_regions
 
-    def plot_max_flux_regions(self, color_band_dict, event_days_range=100, priority=None):
+    def plot_max_flux_regions(self, color_band_dict, event_days_range=100, plot_points=False, priority=None):
 
         priority_regions = self.find_region_priority(event_days_range)
         if priority is not None:
@@ -201,11 +202,13 @@ class LightCurve:
             end_date = mid_pt + event_days_range / 2
 
             if priority is None:
-                fig = self.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date)
+                fig = self.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date,
+                                            plot_points=plot_points)
 
             else:
                 if (i < priority) | (len(ranges) == len(priority_regions[i - 1])):
-                    single_band_plot = self.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date)
+                    single_band_plot = self.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date,
+                                                             plot_points=plot_points)
                     ax = single_band_plot.gca()
                     ax.remove()
                     ax.figure = fig
