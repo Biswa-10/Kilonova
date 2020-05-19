@@ -191,7 +191,7 @@ class LightCurve:
             if priority <= 0:
                 print("Error in priority value, priority number must be greater than 1")
 
-        fig = plt.figure(figsize=(16, 16))
+        fig = plt.figure(figsize=(16, 8))
 
         for i, ranges in enumerate(priority_regions):
 
