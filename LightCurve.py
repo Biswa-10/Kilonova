@@ -214,6 +214,7 @@ class LightCurve:
                     fig.axes.append(ax)
                     fig.add_axes(ax)
                     plt.close(single_band_plot)
+                    del single_band_plot
 
                     for j in range(i):
                         fig.axes[j].change_geometry(i + 1, 1, j + 1)
@@ -221,7 +222,7 @@ class LightCurve:
                     dummy = fig.add_subplot(i + 1, 1, i + 1)
                     ax.set_position(dummy.get_position())
                     dummy.remove()
-
+                    del dummy
                     # print(ranges)
 
                 else:
