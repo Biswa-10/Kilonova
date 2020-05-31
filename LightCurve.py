@@ -50,7 +50,8 @@ class LightCurve:
 
         return points_of_maximum, dates_of_maximum
 
-    def plot_light_curve(self, color_band_dict, band=None, start_date=None, end_date=None, plot_points=False):
+    def plot_light_curve(self, color_band_dict, band=None, start_date=None, end_date=None, plot_points=False,
+                         alpha=1.0):
 
         fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(1, 1, 1)
@@ -79,15 +80,15 @@ class LightCurve:
                     ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                 df_plot_data[self.brightness_err_col_name],
                                 color=color_band_dict[band], fmt='o',
-                                label=pb_name)
+                                label=pb_name, alpha=alpha)
                 else:
                     ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                 df_plot_data[self.brightness_err_col_name],
-                                color=color_band_dict[band], label=pb_name)
+                                color=color_band_dict[band], label=pb_name, alpha=alpha)
 
                 ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
                         color=color_band_dict[band],
-                        marker='o', markersize=10)
+                        marker='o', markersize=15, alpha=alpha)
 
                 ax.set_xlim([start_date, end_date])
 
@@ -114,11 +115,11 @@ class LightCurve:
                     if plot_points == True:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
-                                    color=color_band_dict[band], label=pb_name, fmt='o')
+                                    color=color_band_dict[band], label=pb_name, fmt='o', alpha=alpha)
                     else:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
-                                    color=color_band_dict[band], label=pb_name)
+                                    color=color_band_dict[band], label=pb_name, alpha=alpha)
 
                 if self.points_of_maximum is not None:
                     if band not in self.points_of_maximum.keys():
@@ -126,7 +127,7 @@ class LightCurve:
 
                     else:
                         ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
-                                color=color_band_dict[band], marker='o', markersize=10)
+                                color=color_band_dict[band], marker='o', markersize=15, alpha=alpha)
 
             if data_points_found == 0:
                 print("There are no data points in the given date range")

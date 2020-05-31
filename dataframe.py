@@ -1,8 +1,10 @@
 import numpy as np
 
+
 class Data:
 
-    def __init__(self, df_data, object_id_col_name, time_col_name, band_col_name, band_map, df_metadata = None, mag_or_flux=0,
+    def __init__(self, df_data, object_id_col_name, time_col_name, band_col_name, band_map, df_metadata=None,
+                 mag_or_flux=0,
                  flux_col_name=None, flux_err_col_name=None, mag_col_name=None, mag_err_col_name=None,
                  target_col_name=None):
 
@@ -48,8 +50,13 @@ class Data:
         index = self.df_data[self.object_id_col_name] == target
         return self.df_data[index]
 
-    def get_band_data(self,band):
+    def get_band_data(self, band):
         index = self.df_data[self.band_col_name] == band
         return self.df_data[index]
 
+    def get_object_type(self, object_id):
+        if self.target_col_name is None:
+            print("Target name not given")
+        object_type = np.array(self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
+        return object_type[0][0]
 
