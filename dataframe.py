@@ -54,9 +54,59 @@ class Data:
         index = self.df_data[self.band_col_name] == band
         return self.df_data[index]
 
-    def get_object_type(self, object_id):
+    def get_object_type_number(self, object_id):
         if self.target_col_name is None:
             print("Target name not given")
-        object_type = np.array(self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
+        object_type = np.array(
+            self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
         return object_type[0][0]
 
+    def get_object_type_for_PLAsTiCC(self, object_id):
+        if self.target_col_name is None:
+            print("Target name not given")
+        object_type = np.array(
+            self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
+        object_num = object_type[0][0]
+        if object_num == 90:
+            return "SN-Ia"
+        elif object_num == 67:
+            return "SN-Ia-91bg"
+        elif object_num == 52:
+            return "SN-Iax"
+        elif object_num == 42:
+            return "SNII"
+        elif object_num == 62:
+            return "SNIbc"
+        elif object_num == 95:
+            return "SLSN-I"
+        elif object_num == 15:
+            return "TDE"
+        elif object_num == 64:
+            return "KN"
+        elif object_num == 88:
+            return "AGN"
+        elif object_num == 92:
+            return "RRL"
+        elif object_num == 65:
+            return "M-dwarf"
+        elif object_num == 16:
+            return "EB"
+
+        elif object_num == 53:
+            return "Mira"
+        elif object_num == 6:
+            return "micro-lens Single"
+        else:
+            return "unknown"
+
+    def is_transient(self, object_id):
+        if self.target_col_name is None:
+            print("Target name not given")
+        object_num = np.array(self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
+        object_num = object_num[0][0]
+        if (object_num == 90) | (object_num == 67) | (object_num == 52) | (object_num == 42) | (object_num == 62) | (object_num == 95) | (object_num == 15) | (object_num == 64) | (object_num == 65):
+            return 1
+        elif (object_num == 88) | (object_num == 92) | (object_num == 16) | (object_num == 53) | (object_num == 6):
+            return 0
+        else:
+            return None
