@@ -50,11 +50,13 @@ class LightCurve:
 
         return points_of_maximum, dates_of_maximum
 
-    def plot_light_curve(self, color_band_dict, band=None, start_date=None, end_date=None, plot_points=False,
-                         alpha=1.0):
-
-        fig = plt.figure(figsize=(16, 8))
-        ax = fig.add_subplot(1, 1, 1)
+    def plot_light_curve(self, color_band_dict, fig=None, band=None, start_date=None, end_date=None,
+                         plot_points=False, mark_label=True, mark_maximum=True, label_postfix="", xlims=None, alpha=1.0):
+        if fig is None:
+            fig = plt.figure(figsize=(12, 6))
+            ax = fig.add_subplot(1, 1, 1)
+        else:
+            ax = fig.gca()
 
         if start_date is None:
             start_date = np.amin(self.df[self.time_col_name])
@@ -76,21 +78,24 @@ class LightCurve:
 
                 df_plot_data = self.df[index]
 
-                if plot_points == True:
+
+
+                if plot_points:
                     ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
-                                df_plot_data[self.brightness_err_col_name],
-                                color=color_band_dict[band], fmt='o',
-                                label=pb_name, alpha=alpha)
+                                df_plot_data[self.brightness_err_col_name], color=color_band_dict[band], fmt='o',
+                                label=pb_name + label_postfix if mark_label else "", alpha=alpha)
                 else:
                     ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                 df_plot_data[self.brightness_err_col_name],
-                                color=color_band_dict[band], label=pb_name, alpha=alpha)
+                                color=color_band_dict[band], label=pb_name + label_postfix if mark_label else "",
+                                alpha=alpha)
 
-                ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
-                        color=color_band_dict[band],
-                        marker='o', markersize=15, alpha=alpha)
-
-                ax.set_xlim([start_date, end_date])
+                if mark_maximum:
+                    ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
+                            color=color_band_dict[band],
+                            marker='o', markersize=15, alpha=alpha)
+                if xlims is not None:
+                    ax.set_xlim([start_date, end_date])
 
             else:
                 print("the band requested is not present")
@@ -112,22 +117,26 @@ class LightCurve:
                     data_points_found = 1
                     df_plot_data = self.df[index]
 
-                    if plot_points == True:
+                    if plot_points:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
-                                    color=color_band_dict[band], label=pb_name, fmt='o', alpha=alpha)
+                                    color=color_band_dict[band],
+                                    label=pb_name+label_postfix if mark_label else "", fmt='o',
+                                    alpha=alpha)
                     else:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
-                                    color=color_band_dict[band], label=pb_name, alpha=alpha)
+                                    color=color_band_dict[band], label=pb_name + label_postfix if mark_label else "",
+                                    alpha=alpha)
 
-                if self.points_of_maximum is not None:
-                    if band not in self.points_of_maximum.keys():
-                        print("could not find the band number " + str(band) + " in points_of_maximum")
+                if mark_maximum:
+                    if self.points_of_maximum is not None:
+                        if band not in self.points_of_maximum.keys():
+                            print("could not find the band number " + str(band) + " in points_of_maximum")
 
-                    else:
-                        ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
-                                color=color_band_dict[band], marker='o', markersize=15, alpha=alpha)
+                        else:
+                            ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
+                                    color=color_band_dict[band], marker='o', markersize=15, alpha=alpha)
 
             if data_points_found == 0:
                 print("There are no data points in the given date range")
@@ -136,12 +145,13 @@ class LightCurve:
             max_date = np.amax(self.df[self.time_col_name])
 
             # ax.plot([start_date, end_date], [0, 0], label='y=0')
-            ax.set_xlim([start_date, end_date])
+            if xlims is not None:
+                ax.set_xlim([start_date, end_date])
 
-        ax.legend()
+        #ax.legend()
         # ax.remove()
-        ax.set_xlabel("mjd", fontsize=20)
-        ax.set_ylabel("flux", fontsize=20)
+        plt.xlabel("mjd", fontsize=20)
+        plt.ylabel("flux", fontsize=20)
         # fig.close()
 
         return fig
@@ -192,7 +202,7 @@ class LightCurve:
             if priority <= 0:
                 print("Error in priority value, priority number must be greater than 1")
 
-        fig = plt.figure(figsize=(16, 8))
+        fig = plt.figure(figsize=(12, 6))
 
         for i, ranges in enumerate(priority_regions):
 

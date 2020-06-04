@@ -122,3 +122,6 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/python,jupyternotebooks
+Linear_combinations/
+fit_vid/
+kilonova_curves/
