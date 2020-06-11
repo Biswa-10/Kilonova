@@ -51,7 +51,8 @@ class LightCurve:
         return points_of_maximum, dates_of_maximum
 
     def plot_light_curve(self, color_band_dict, fig=None, band=None, start_date=None, end_date=None,
-                         plot_points=False, mark_label=True, mark_maximum=True, label_postfix="", xlims=None, alpha=1.0):
+                         plot_points=False, mark_label=True, mark_maximum=True, label_postfix="", xlims=None,
+                         alpha=1.0):
         if fig is None:
             fig = plt.figure(figsize=(12, 6))
             ax = fig.add_subplot(1, 1, 1)
@@ -67,33 +68,27 @@ class LightCurve:
 
             if band in self.band_map.keys():
 
+                event_df = self.get_time_sliced_df(start_date=start_date, end_date=end_date)
+                band_df = self.extract_band_data(band=band, event_df=event_df)
                 pb_name = self.band_map[band]
-                band_index = self.df[self.band_col_name] == band
-                start_index = self.df[self.time_col_name] >= start_date
-                end_index = self.df[self.time_col_name] <= end_date
-                index = band_index * start_index * end_index
-
-                if sum(index) <= 0:
-                    print("the band requested has no data points in the given date range")
-
-                df_plot_data = self.df[index]
-
-
+                # band_index = self.df[self.band_col_name] == band
+                # start_index = self.df[self.time_col_name] >= start_date
+                # end_index = self.df[self.time_col_name] <= end_date
+                # index = band_index * start_index * end_index
 
                 if plot_points:
-                    ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
-                                df_plot_data[self.brightness_err_col_name], color=color_band_dict[band], fmt='o',
+                    ax.errorbar(band_df[self.time_col_name], band_df[self.brightness_col_name],
+                                band_df[self.brightness_err_col_name], color=color_band_dict[band], fmt='o',
                                 label=pb_name + label_postfix if mark_label else "", alpha=alpha)
                 else:
-                    ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
-                                df_plot_data[self.brightness_err_col_name],
+                    ax.errorbar(band_df[self.time_col_name], band_df[self.brightness_col_name],
+                                band_df[self.brightness_err_col_name],
                                 color=color_band_dict[band], label=pb_name + label_postfix if mark_label else "",
                                 alpha=alpha)
 
                 if mark_maximum:
-                    ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
-                            color=color_band_dict[band],
-                            marker='o', markersize=15, alpha=alpha)
+                    fig = self.mark_maximum_in_plot(color_band_dict=color_band_dict, fig=fig, band=band,
+                                                    start_date=start_date, end_date=end_date)
                 if xlims is not None:
                     ax.set_xlim([start_date, end_date])
 
@@ -121,7 +116,7 @@ class LightCurve:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
                                     color=color_band_dict[band],
-                                    label=pb_name+label_postfix if mark_label else "", fmt='o',
+                                    label=pb_name + label_postfix if mark_label else "", fmt='o',
                                     alpha=alpha)
                     else:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
@@ -130,13 +125,8 @@ class LightCurve:
                                     alpha=alpha)
 
                 if mark_maximum:
-                    if self.points_of_maximum is not None:
-                        if band not in self.points_of_maximum.keys():
-                            print("could not find the band number " + str(band) + " in points_of_maximum")
-
-                        else:
-                            ax.plot(self.points_of_maximum[band][0], self.points_of_maximum[band][1],
-                                    color=color_band_dict[band], marker='o', markersize=15, alpha=alpha)
+                    fig = self.mark_maximum_in_plot(color_band_dict=color_band_dict, fig=fig, band=band,
+                                                    start_date=start_date, end_date=end_date)
 
             if data_points_found == 0:
                 print("There are no data points in the given date range")
@@ -148,12 +138,60 @@ class LightCurve:
             if xlims is not None:
                 ax.set_xlim([start_date, end_date])
 
-        #ax.legend()
+        # ax.legend()
         # ax.remove()
         plt.xlabel("mjd", fontsize=20)
         plt.ylabel("flux", fontsize=20)
         # fig.close()
 
+        return fig
+
+    def get_time_sliced_df(self, start_date=None, end_date=None, current_date=None):
+        event_df = self.df
+        if start_date is None:
+            if end_date is None:
+                return event_df
+            start_date = np.amix(event_df[self.time_col_name])
+        if end_date is None:
+            end_date = np.amax(event_df[self.time_col_name])
+        start_index = event_df[self.time_col_name] >= start_date
+        end_index = event_df[self.time_col_name] <= end_date
+        if current_date is None:
+            return event_df[start_index & end_index]
+        else:
+            past_index = event_df[self.time_col_name] <= current_date
+            return event_df[start_index & end_index & past_index]
+
+    def extract_band_data(self, band, event_df):
+        if event_df is None:
+            event_df = self.df
+        band_index = event_df[self.band_col_name] == band
+        return event_df[band_index]
+
+    def get_max_point_of_band(self, band, start_date=None, end_date=None, event_df=None):
+        if event_df is None:
+            event_df = self.get_time_sliced_df(start_date, end_date)
+        band_df = self.extract_band_data(band, event_df)
+        if len(band_df) > 0:
+            loc = np.argmax(band_df[self.brightness_col_name])
+            max_time = band_df[self.time_col_name][loc]
+            max_flux = band_df[self.brightness_col_name][loc]
+            return (max_time, max_flux)
+        else:
+            return None
+
+    def mark_maximum_in_plot(self, color_band_dict, fig, band=None, start_date=None, end_date=None):
+        ax = fig.gca()
+        if band is None:
+            bands = self.band_map.keys()
+            for band in bands:
+                max_point = self.get_max_point_of_band(band=band, start_date=start_date, end_date=end_date)
+                if max_point is not None:
+                    ax.plot(max_point[0], max_point[1], color=color_band_dict[band], marker='o', markersize=15)
+        else:
+            max_point = self.get_max_point_of_band(band=band, start_date=start_date, end_date=end_date)
+            if max_point is not None:
+                ax.plot(max_point[0], max_point[1], color=color_band_dict[band], marker='o', markersize=15)
         return fig
 
     def find_region_priority(self, total_days_range=100):
