@@ -8,9 +8,9 @@ from dataframe import Data
 
 class LightCurve:
 
-    def __init__(self, input_df, time_col_name, brightness_col_name, brightness_err_col_name, band_col_name,
-                 band_map):
+    def __init__(self, object_id, input_df, time_col_name, brightness_col_name, brightness_err_col_name, band_col_name, band_map):
         self.df = Table()
+        self.object_id = object_id
         self.df[time_col_name] = input_df[time_col_name]
         self.df[brightness_col_name] = input_df[brightness_col_name]
         self.df[brightness_err_col_name] = input_df[brightness_err_col_name]
@@ -151,7 +151,7 @@ class LightCurve:
         if start_date is None:
             if end_date is None:
                 return event_df
-            start_date = np.amix(event_df[self.time_col_name])
+            start_date = np.amax(event_df[self.time_col_name])
         if end_date is None:
             end_date = np.amax(event_df[self.time_col_name])
         start_index = event_df[self.time_col_name] >= start_date

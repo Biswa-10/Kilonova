@@ -1,4 +1,3 @@
-from SNANA_FITS_to_pd import read_fits
 from dataframe import Data
 from astropy.table import Table, vstack
 from random import random
@@ -23,12 +22,10 @@ def load_ztf_mixed():
     data_ob = None
 
     for model_num in m_numbers:
-        # print(data_ob.df_data.keys())
-        #rand_int = int(random() * 40) + 1
+
         rand_int = 25
         if (int(model_num) != 45) & (int(model_num) != 50):
             if rand_int < 10:
-                print(model_num)
                 file_path = base_path + model_num + '/ZTF_MSIP_NONIaMODEL0-000' + str(rand_int) + '_PHOT.FITS'
                 current_ob = load_ztf_data(filepath=file_path)
             else:
@@ -38,7 +35,6 @@ def load_ztf_mixed():
 
         else:
             if rand_int < 10:
-                print(model_num)
                 file_path = base_path + model_num + '/ZTF_MSIP_NONIa-000' + str(rand_int) + '_PHOT.FITS'
                 current_ob = load_ztf_data(filepath=file_path)
             else:
@@ -48,22 +44,13 @@ def load_ztf_mixed():
         if data_ob is None:
             current_ob.df_metadata['target'] = np.ones(len(current_ob.df_metadata)) * int(model_num)
             data_ob = current_ob
-            # data_ob.df_metadata = current_ob.df_metadata['SNID']
-            # data_ob.df_data(names=data_ob.df_data.keys())
 
-            print(data_ob.df_data.keys())
-            # break
-
-            # data_ob = current_ob
         else:
             current_ob.df_metadata['target'] = int(model_num)
-            print(data_ob.df_data.keys())
             data_ob.df_data = vstack([data_ob.df_data, current_ob.df_data])
             current_ob.df_metadata['target'] = np.ones(len(current_ob.df_metadata)) * int(model_num)
             data_ob.df_metadata = vstack([data_ob.df_metadata, current_ob.df_metadata], join_type='inner')
-            print(data_ob.df_data.keys())
-            print("------------------------------")
-            print(current_ob.df_data.keys())
+
             # data_ob.df_metadata = .df_data.keys())
             # data_ob.df_data= vstack([data_ob.df_metadata, current_ob.df_metadata['SNID']])
     data_ob.target_col_name = 'target'
@@ -89,3 +76,47 @@ def load_RESSPECT_data(phot_df_file_path="/media/biswajit/drive/Kilonova_dataset
                    band_col_name='FLT', flux_col_name='FLUXCAL', flux_err_col_name='FLUXCALERR',
                    band_map={'u': 'u', 'g': 'g', 'r': 'r', 'i': 'i', 'z': 'z', 'Y': 'y'})
     return data_ob
+
+
+def read_fits(fname, drop_separators=False):
+    """Load SNANA formatted data and cast it to a PANDAS dataframe
+
+    Args:
+        fname (str): path + name to PHOT.FITS file
+        drop_separators (Boolean): if -777 are to be dropped
+
+    Returns:
+        (pandas.DataFrame) dataframe from PHOT.FITS file (with ID)
+        (pandas.DataFrame) dataframe from HEAD.FITS file
+    """
+
+    # load photometry
+    dat = Table.read(fname, format='fits')
+    df_phot = dat.to_pandas()
+    # failsafe
+    if df_phot.MJD.values[-1] == -777.0:
+        df_phot = df_phot.drop(df_phot.index[-1])
+    if df_phot.MJD.values[0] == -777.0:
+        df_phot = df_phot.drop(df_phot.index[0])
+
+    # load header
+    header = Table.read(fname.replace("PHOT", "HEAD"), format="fits")
+    df_header = header.to_pandas()
+    df_header["SNID"] = df_header["SNID"].astype(np.int32)
+
+    # add SNID to phot for skimming
+    arr_ID = np.zeros(len(df_phot), dtype=np.int32)
+    # New light curves are identified by MJD == -777.0
+    arr_idx = np.where(df_phot["MJD"].values == -777.0)[0]
+    arr_idx = np.hstack((np.array([0]), arr_idx, np.array([len(df_phot)])))
+    # Fill in arr_ID
+    for counter in range(1, len(arr_idx)):
+        start, end = arr_idx[counter - 1], arr_idx[counter]
+        # index starts at zero
+        arr_ID[start:end] = df_header.SNID.iloc[counter - 1]
+    df_phot["SNID"] = arr_ID
+
+    if drop_separators:
+        df_phot = df_phot[df_phot.MJD != -777.000]
+
+    return df_header, df_phot
