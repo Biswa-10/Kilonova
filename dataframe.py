@@ -4,8 +4,7 @@ import numpy as np
 class Data:
 
     def __init__(self, df_data, object_id_col_name, time_col_name, band_col_name, band_map, df_metadata=None,
-                 mag_or_flux=0,
-                 flux_col_name=None, flux_err_col_name=None, mag_col_name=None, mag_err_col_name=None,
+                 mag_or_flux=0, flux_col_name=None, flux_err_col_name=None, mag_col_name=None, mag_err_col_name=None,
                  target_col_name=None):
 
         self.object_id_col_name = object_id_col_name

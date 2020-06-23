@@ -8,23 +8,22 @@ from dataframe import Data
 
 class LightCurve:
 
-    def __init__(self, object_id, input_df, time_col_name, brightness_col_name, brightness_err_col_name, band_col_name, band_map):
+    def __init__(self, data_ob, object_id):
+
         self.df = Table()
         self.object_id = object_id
-        self.df[time_col_name] = input_df[time_col_name]
-        self.df[brightness_col_name] = input_df[brightness_col_name]
-        self.df[brightness_err_col_name] = input_df[brightness_err_col_name]
-        self.df[band_col_name] = input_df[band_col_name]
-
-        self.time_col_name = time_col_name
-        self.brightness_col_name = brightness_col_name
-        self.brightness_err_col_name = brightness_err_col_name
-        self.band_col_name = band_col_name
-        self.band_map = band_map
+        self.df = data_ob.get_data_of_event(object_id)
+        self.time_col_name = data_ob.time_col_name
+        self.brightness_col_name = data_ob.flux_col_name
+        self.brightness_err_col_name = data_ob.flux_err_col_name
+        self.band_col_name = data_ob.band_col_name
+        self.band_map = data_ob.band_map
         # print(input_df[band_col_name])
         self.points_of_maximum, self.dates_of_maximum = self.get_dates_of_maximum()
 
     def get_band_data(self, band):
+        #print(self.band_col_name)
+        #print(self.df[self.band_col_name])
         index = self.df[self.band_col_name] == band
         return self.df[index]
 
