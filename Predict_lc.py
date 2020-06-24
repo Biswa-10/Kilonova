@@ -275,9 +275,9 @@ class PredictLightCurve:
 
             if axes_lims:
                 if self.prediction_start_date is not np.inf:
-                    plt.xlim(left=self.prediction_start_date-buffer_days)
+                    plt.xlim(left=self.prediction_start_date - buffer_days)
                 if self.prediction_end_date != 0:
-                    plt.xlim(right=self.prediction_end_date+buffer_days)
+                    plt.xlim(right=self.prediction_end_date + buffer_days)
 
             if not self.decouple_prediction_bands:
                 _, _, ymin, ymax = plt.axis()
