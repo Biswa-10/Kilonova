@@ -1,4 +1,5 @@
 import numpy as np
+from astropy.table import vstack
 
 
 class Data:
@@ -37,13 +38,27 @@ class Data:
             return np.unique(self.df_data[self.object_id_col_name])
 
     def get_ids_of_event_type(self, target):
-        if self.target_col_name is None:
-            print("Target name not given")
+        if isinstance(target, int):
+            if self.target_col_name is None:
+                print("Target name not given")
+            else:
+                event = self.df_metadata[self.target_col_name]
+                index = event == target
+                object_ids = self.get_all_object_ids()
+                class_ids = object_ids[index]
         else:
-            event = self.df_metadata[self.target_col_name]
-            index = event == target
-            object_ids = self.get_all_object_ids()
-        return object_ids[index]
+            class_ids = None
+
+            for target_id in target:
+                event = self.df_metadata[self.target_col_name]
+                index = event == target_id
+                object_ids = self.get_all_object_ids()
+                if class_ids is None:
+                    class_ids = object_ids[index]
+                else:
+                    class_ids = vstack([class_ids, object_ids[index]])
+
+        return class_ids
 
     def get_data_of_event(self, target):
         index = self.df_data[self.object_id_col_name] == target
@@ -101,9 +116,11 @@ class Data:
     def is_transient(self, object_id):
         if self.target_col_name is None:
             print("Target name not given")
-        object_num = np.array(self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
+        object_num = np.array(
+            self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
         object_num = object_num[0][0]
-        if (object_num == 90) | (object_num == 67) | (object_num == 52) | (object_num == 42) | (object_num == 62) | (object_num == 95) | (object_num == 15) | (object_num == 64) | (object_num == 65):
+        if (object_num == 90) | (object_num == 67) | (object_num == 52) | (object_num == 42) | (object_num == 62) | (
+                object_num == 95) | (object_num == 15) | (object_num == 64) | (object_num == 65):
             return 1
         elif (object_num == 88) | (object_num == 92) | (object_num == 16) | (object_num == 53) | (object_num == 6):
             return 0

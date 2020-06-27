@@ -92,6 +92,7 @@ class PredictLightCurve:
                 # initial_guess = np.amax(fit_df[self.lc.brightness_col_name])*np.array([.93,.03 ,.025])
                 initial_guess = np.asarray([.93, .03, .025])
                 result = minimize(calc_loss, initial_guess, args=(self.pcs, light_curve_seg))
+                #result = minimize(calc_loss, args=(self.pcs, light_curve_seg))
 
                 return result.x
 
