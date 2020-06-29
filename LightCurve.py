@@ -3,7 +3,6 @@ from astropy.table import Table
 import copy
 from statistics import median
 import matplotlib.pyplot as plt
-from dataframe import Data
 
 
 class LightCurve:
@@ -22,8 +21,8 @@ class LightCurve:
         self.points_of_maximum, self.dates_of_maximum = self.get_dates_of_maximum()
 
     def get_band_data(self, band):
-        #print(self.band_col_name)
-        #print(self.df[self.band_col_name])
+        # print(self.band_col_name)
+        # print(self.df[self.band_col_name])
         index = self.df[self.band_col_name] == band
         return self.df[index]
 
