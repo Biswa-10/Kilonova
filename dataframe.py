@@ -58,6 +58,7 @@ class Data:
         self.prediction_type_nos = None
         self.prediction_stat_df = None
         self.sample_numbers = None
+        self.num_pc_components = None
 
         if mag_or_flux == 1:
             if mag_col_name is None:
@@ -182,6 +183,8 @@ class Data:
             self.prediction_type_nos = prediction_type_nos
             self.prediction_type_nos.sort()
 
+        self.num_pc_components = num_pc_components
+
         if features_path is None:
             data_dict = {'id': [],
                          'type': [], }
@@ -230,3 +233,155 @@ class Data:
         self.sample_numbers = sample_numbers
         self.add_y_val()
 
+    def plot_features_correlation_helper(self, class_features_df, color_band_dict=None, fig=None, bands=None,
+                                         x_limits=None, y_limits=None, mark_xlabel=False, mark_ylabel=False,
+                                         set_ax_title=False, band_map=None, label=""):
+
+        num_rows = len(self.bands)
+        num_cols = int(self.num_pc_components * (self.num_pc_components - 1) / 2)
+
+        if fig is None:
+            fig, axs = plt.subplots(num_rows, num_cols, figsize=(self.num_pc_components * 5, len(self.bands) * 5))
+            # fig.subplots_adjust(wspace=.5,hspace=.5)
+            ax_list = fig.axes
+        else:
+            ax_list = fig.axes
+
+        if self.bands is None:
+            bands = self.data_ob.band_map.keys()
+
+        for i, band in enumerate(bands):
+            for x in range(self.num_pc_components):
+                for y in range(x):
+                    ax_current = ax_list[int(i * num_cols + (x - 1) * (x) / 2 + y)]
+
+                    colx_name = str(i) + "pc" + str(x + 1)
+                    coly_name = str(i) + "pc" + str(y + 1)
+                    if mark_xlabel: ax_current.set_xlabel("PC" + str(x + 1))
+                    if mark_ylabel: ax_current.set_ylabel("PC" + str(y + 1))
+
+                    PCx = class_features_df[colx_name].values
+                    PCy = class_features_df[coly_name].values
+
+                    if color_band_dict is not None:
+                        ax_current.scatter(PCx, PCy, color=color_band_dict[band], alpha=.5, label=label)
+                    else:
+                        ax_current.scatter(PCx, PCy, color="yellow", alpha=.4, label=label)
+
+                    if x_limits is not None: ax_current.set_xlim(x_limits)
+                    if y_limits is not None: ax_current.set_ylim(y_limits)
+
+                    if set_ax_title:
+                        if band_map is None:
+                            ax_current.set_title("PCs for " + str(band) + "-band")
+                        else:
+                            ax_current.set_title("PCs for " + str(band_map[band]) + "-band")
+                    if label != "":
+                        ax_current.legend(loc="upper right")
+                    ax_current.set_aspect('equal', 'box')
+        fig.tight_layout()
+        return fig
+
+    def plot_features_correlation(self, color_band_dict, fig=None, bands= None,
+                                  x_limits=None, y_limits=None, mark_xlabel=True, mark_ylabel=True, band_map=None,
+                                  set_ax_title=True, label=""):
+
+        kn_df = self.features_df[self.features_df['y_true'] == 1]
+        non_kn_df = self.features_df[self.features_df['y_true'] == 0]
+        if bands is None:
+            bands = self.bands
+
+        num_rows = len(bands)
+        num_cols = int(self.num_pc_components * (self.num_pc_components - 1) / 2)
+
+        fig, axs = plt.subplots(num_rows, num_cols, figsize=(self.num_pc_components * 5, len(bands) * 5))
+        # fig.subplots_adjust(wspace=.5,hspace=.5)
+
+        self.plot_features_correlation_helper(non_kn_df, fig=fig, band_map=band_map,
+                                         color_band_dict=None, bands=bands, x_limits=x_limits, y_limits=y_limits,
+                                         mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel, set_ax_title=set_ax_title,
+                                         label="")
+        self.plot_features_correlation_helper(kn_df, fig=fig, band_map=band_map,
+                                         color_band_dict=color_band_dict, bands=bands, x_limits=x_limits,
+                                         y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
+                                         set_ax_title=set_ax_title, label="")
+
+        plt.show()
+
+    def plot_band_correlation_helper(self, current_class_df, bands, color_band_dict=None, fig=None,
+                                     x_limits=None, y_limits=None, mark_xlabel=False, mark_ylabel=False,
+                                     band_map=None, set_ax_title=False, label=""):
+        num_rows = int(len(bands) * (len(bands) - 1) / 2)
+        num_cols = self.num_pc_components
+        if fig is None:
+            fig, axs = plt.subplots(num_rows, num_cols, figsize=(self.num_pc_components * 5, len(bands) * 5))
+            fig.subplots_adjust(wspace=.5, hspace=.5)
+            ax_list = fig.axes
+        else:
+            ax_list = fig.axes
+
+        for i in range(self.num_pc_components):
+            # print("pc "+str(i))
+            for x, band in enumerate(bands):
+                for y in range(x):
+
+                    x_band = bands[x]
+                    y_band = bands[y]
+                    # print("x " +str(x))
+                    # print("y " +str(y))
+                    # print(int(i*len(bands)*(len(bands)-1)/2 + (x-1)*(x-2)/2 +y))
+                    ax_current = ax_list[int(i * num_rows + (x - 1) * (x - 2) / 2 + y)]
+
+                    colx_name = str(x) + "pc" + str(i + 1)
+                    coly_name = str(y) + "pc" + str(i + 1)
+
+                    # print(coeff_plot_data)
+                    PCx = current_class_df[colx_name].values
+                    PCy = current_class_df[coly_name].values
+
+                    if color_band_dict is not None:
+                        ax_current.scatter(PCx, PCy, color=color_band_dict[band], alpha=.5, label=label)
+                    else:
+                        ax_current.scatter(PCx, PCy, color="yellow", alpha=.4, label=label)
+
+                    if x_limits is not None: ax_current.set_xlim(x_limits)
+                    if y_limits is not None: ax_current.set_ylim(y_limits)
+                    if band_map is None:
+                        if mark_xlabel: ax_current.set_xlabel(x_band + " band")
+                        if mark_ylabel: ax_current.set_ylabel(y_band + " band")
+                    else:
+                        if mark_xlabel: ax_current.set_xlabel(band_map[x_band] + " band")
+                        if mark_ylabel: ax_current.set_ylabel(band_map[y_band] + " band")
+                    if set_ax_title: ax_current.set_title("correlation for PC" + str(i + 1))
+                    if label != "":
+                        ax_current.legend(loc="upper right")
+                    ax_current.set_aspect('equal', 'box')
+
+        fig.tight_layout()
+        return fig
+
+    def plot_band_correlation(self, bands=None, color_band_dict=None, fig=None, x_limits=None,
+                              y_limits=None, mark_xlabel=True, mark_ylabel=True, band_map=None, set_ax_title=True,
+                              label=""):
+        if bands is None:
+            bands = self.bands
+        kn_df = self.features_df[self.features_df['y_true'] == 1]
+        non_kn_df = self.features_df[self.features_df['y_true'] == 0]
+
+        num_rows = int(len(bands) * (len(bands) - 1) / 2)
+        num_cols = self.num_pc_components
+        space_between_axes = 0.0
+
+        fig, axs = plt.subplots(num_rows, num_cols, figsize=(num_cols * 5, num_rows * 5))
+        # fig.subplots_adjust(wspace=space_between_axes,hspace=space_between_axes)
+        self.plot_band_correlation_helper(non_kn_df, bands=bands, fig=fig,
+                                     color_band_dict=None, band_map=band_map, x_limits=x_limits, y_limits=y_limits,
+                                     mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel, set_ax_title=set_ax_title,
+                                     label="")
+        self.plot_band_correlation_helper(kn_df, bands=bands, fig=fig,
+                                     color_band_dict=color_band_dict, band_map=band_map, x_limits=x_limits,
+                                     y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
+                                     set_ax_title=set_ax_title, label="")
+        # plt.xlabel(" correlation ")
+
+        plt.show()

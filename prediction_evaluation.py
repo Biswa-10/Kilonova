@@ -70,7 +70,11 @@ class PredictionEvaluation:
         if train_ob.prediction_type_nos.sort() == test_ob.prediction_type_nos.sort():
             self.prediction_type_nos = train_ob.prediction_type_nos
         else:
-            print("prediction inconsistany")
+            print("prediction type inconsistany")
+        if train_ob.num_pc_components == test_ob.num_pc_components:
+            self.num_pc_components = train_ob.num_pc_components
+        else:
+            print("number of components inconsistent")
 
         self.test_ob = test_ob
         self.test_sample_numbers = test_ob.sample_numbers
