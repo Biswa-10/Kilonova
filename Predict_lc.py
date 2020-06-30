@@ -24,11 +24,11 @@ def calc_loss(coeff, PCs, light_curve_seg, bias=None):
 
 class PredictLightCurve:
 
-    def __init__(self, data_ob, object_id):
+    def __init__(self, data_ob, object_id, num_pc_components=3):
 
         self.lc = LightCurve(data_ob, object_id)
         self.current_date = None
-        self.num_pc_components = 3
+        self.num_pc_components = num_pc_components
         self.bands = None
         self.pcs = None
         self.decouple_prediction_bands = True
@@ -90,7 +90,8 @@ class PredictLightCurve:
                 light_curve_seg = np.zeros(self.num_prediction_days)
                 light_curve_seg[b2[:]] = fit_df[self.lc.brightness_col_name]
                 # initial_guess = np.amax(fit_df[self.lc.brightness_col_name])*np.array([.93,.03 ,.025])
-                initial_guess = np.asarray([.93, .03, .025])
+                #initial_guess = np.asarray([.93, .03, .025])
+                initial_guess = np.zeros(self.num_pc_components)
                 result = minimize(calc_loss, initial_guess, args=(self.pcs, light_curve_seg))
                 #result = minimize(calc_loss, args=(self.pcs, light_curve_seg))
 
@@ -220,8 +221,10 @@ class PredictLightCurve:
                     light_curve_seg = np.zeros(self.num_prediction_days)
                     light_curve_seg[b2[:]] = band_df[self.lc.brightness_col_name]
                     initial_guess = np.amax(band_df[self.lc.brightness_col_name]) * np.array([.93, .03, .025])
+                    initial_guess = np.zeros(self.num_pc_components)
                     result = minimize(calc_loss, initial_guess, args=(pcs, light_curve_seg))
                     coeff_all_band[band] = list(result.x)
+                    print(result.x)
                     num_points_dict[band] = len(b2)
 
                 else:

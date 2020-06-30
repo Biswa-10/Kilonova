@@ -157,7 +157,8 @@ class Data:
         if self.target_col_name is None:
             print("Target name not given")
         object_num = np.array(
-            self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
+            self.df_metadata[self.target_col_name][
+                np.argwhere(self.df_metadata[self.object_id_col_name_name] == object_id)])
         object_num = object_num[0][0]
         if (object_num == 90) | (object_num == 67) | (object_num == 52) | (object_num == 42) | (object_num == 62) | (
                 object_num == 95) | (object_num == 15) | (object_num == 64) | (object_num == 65):
@@ -175,7 +176,10 @@ class Data:
     def create_features_df(self, prediction_type_nos, features_path=None, sample_numbers=None,
                            decouple_prediction_bands=True,
                            decouple_pc_bands=False, mark_maximum=False, min_flux_threshold=20, num_pc_components=3,
-                           color_band_dict=None, use_random_current_date=False, plot_prediction=False):
+                           color_band_dict=None, use_random_current_date=False, plot_predicted_curve_of_type=None, plot_all_predictions = False):
+
+        if plot_all_predictions:
+            plot_predicted_curve_of_type = np.unique(self.df_metadata[self.target_col_name])
 
         if isinstance(prediction_type_nos, int):
             self.prediction_type_nos = [prediction_type_nos]
@@ -189,11 +193,11 @@ class Data:
             data_dict = {'id': [],
                          'type': [], }
 
-            object_ids = self.data_ob.get_all_object_ids()
+            object_ids = self.get_all_object_ids()
             # data_object_ids = np.random.permutation(data_object_ids)
-            self.data_ob.df_data.sort([self.data_ob.object_id_col_name, self.data_ob.time_col_name])
+            self.df_data.sort([self.object_id_col_name, self.time_col_name])
             for object_id in tqdm(object_ids):
-                pc = PredictLightCurve(self.data_ob, object_id=object_id)
+                pc = PredictLightCurve(self, object_id=object_id)
                 current_date = None
                 if use_random_current_date:
                     median_date = np.median(pc.lc.dates_of_maximum)
@@ -215,11 +219,18 @@ class Data:
                     if col_name not in data_dict.keys():
                         data_dict[col_name] = []
                     data_dict[col_name].append(num_pts_dict[band])
-                object_type = self.data_ob.get_object_type_number(object_id)
+                object_type = self.get_object_type_number(object_id)
                 data_dict['type'].append(object_type)
-                if plot_prediction:
-                    fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
-                                                  mark_maximum=mark_maximum, axes_lims=False)
+                if plot_predicted_curve_of_type is not None:
+
+                    if color_band_dict is None:
+                        print("error: pass color of each band")
+
+                    if object_type in plot_predicted_curve_of_type:
+                        fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
+                                                      mark_maximum=mark_maximum, axes_lims=False,
+                                                      object_name=str(object_type))
+                        fig.savefig('kilonova_curves/ZTF_KN_plots/'+str(object_type)+"_"+str(object_id))
                     plt.show()
                     plt.close('all')
 
@@ -282,7 +293,7 @@ class Data:
         fig.tight_layout()
         return fig
 
-    def plot_features_correlation(self, color_band_dict, fig=None, bands= None,
+    def plot_features_correlation(self, color_band_dict, fig=None, bands=None,
                                   x_limits=None, y_limits=None, mark_xlabel=True, mark_ylabel=True, band_map=None,
                                   set_ax_title=True, label=""):
 
@@ -298,13 +309,14 @@ class Data:
         # fig.subplots_adjust(wspace=.5,hspace=.5)
 
         self.plot_features_correlation_helper(non_kn_df, fig=fig, band_map=band_map,
-                                         color_band_dict=None, bands=bands, x_limits=x_limits, y_limits=y_limits,
-                                         mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel, set_ax_title=set_ax_title,
-                                         label="")
+                                              color_band_dict=None, bands=bands, x_limits=x_limits, y_limits=y_limits,
+                                              mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
+                                              set_ax_title=set_ax_title,
+                                              label="")
         self.plot_features_correlation_helper(kn_df, fig=fig, band_map=band_map,
-                                         color_band_dict=color_band_dict, bands=bands, x_limits=x_limits,
-                                         y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
-                                         set_ax_title=set_ax_title, label="")
+                                              color_band_dict=color_band_dict, bands=bands, x_limits=x_limits,
+                                              y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
+                                              set_ax_title=set_ax_title, label="")
 
         plt.show()
 
@@ -375,13 +387,13 @@ class Data:
         fig, axs = plt.subplots(num_rows, num_cols, figsize=(num_cols * 5, num_rows * 5))
         # fig.subplots_adjust(wspace=space_between_axes,hspace=space_between_axes)
         self.plot_band_correlation_helper(non_kn_df, bands=bands, fig=fig,
-                                     color_band_dict=None, band_map=band_map, x_limits=x_limits, y_limits=y_limits,
-                                     mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel, set_ax_title=set_ax_title,
-                                     label="")
+                                          color_band_dict=None, band_map=band_map, x_limits=x_limits, y_limits=y_limits,
+                                          mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel, set_ax_title=set_ax_title,
+                                          label="")
         self.plot_band_correlation_helper(kn_df, bands=bands, fig=fig,
-                                     color_band_dict=color_band_dict, band_map=band_map, x_limits=x_limits,
-                                     y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
-                                     set_ax_title=set_ax_title, label="")
+                                          color_band_dict=color_band_dict, band_map=band_map, x_limits=x_limits,
+                                          y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
+                                          set_ax_title=set_ax_title, label="")
         # plt.xlabel(" correlation ")
 
         plt.show()
