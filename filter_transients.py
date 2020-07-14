@@ -3,9 +3,9 @@ from astropy.table import Table
 from dataframe import Data
 
 
-def calc_transient_pausibility(data_ob, object_df):
+def calc_priodic_penalty(data_ob, object_df):
     if len(object_df) == 0:
-        pausibility = 0
+        penalty = 0
 
     else:
 
@@ -22,13 +22,13 @@ def calc_transient_pausibility(data_ob, object_df):
         length = np.sum(np.where(time_from_max >= 0))
 
         # normalization = np.sum(index_greater_than_half)
-        pausibility = np.sum(np.abs(object_df[data_ob.flux_col_name]) * np.abs(time_from_max)) / max_flux_val
-        # print(pausibility)
+        penalty = np.sum(np.abs(object_df[data_ob.flux_col_name]) * np.abs(time_from_max)) / max_flux_val
+        # print(penalty)
 
-    return pausibility
+    return penalty
 
 
-def transient_filter(data_ob):
+def PLAsTiCC_transient_filter(data_ob):
     object_ids = data_ob.get_all_object_ids()
     filter_result = np.zeros(len(object_ids), dtype=bool)
     for i, object_id in enumerate(object_ids):
@@ -38,9 +38,9 @@ def transient_filter(data_ob):
         flux_err_ratio = np.abs(object_df[data_ob.flux_col_name]) > 2 * object_df[data_ob.flux_err_col_name]
         index = (np.abs(flux_and_error_diff) > 10) & flux_err_ratio
         object_df = object_df[index]
-        pausibility = calc_transient_pausibility(data_ob, object_df)
+        penalty = calc_priodic_penalty(data_ob, object_df)
         max_per_band = []
-        if pausibility > 1500:
+        if np.log(penalty+1) > 8:
             continue
         for band in range(6):
             band_mask = data_ob.df_data[data_ob.band_col_name] == band
