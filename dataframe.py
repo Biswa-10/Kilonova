@@ -9,27 +9,36 @@ import pandas as pd
 
 
 def sample_from_df(data_df, sample_numbers, shuffle=False):
-    final_df = None
-    data_df = data_df.sample(frac=1).reset_index(drop=True)
-    for key, value in sample_numbers.items():
-        if value == 0:
-            continue
-        current_type_df = data_df[data_df['type'] == key]
-        len_current_df = len(current_type_df)
-        if len_current_df == 0:
-            print("event type not found")
-        if value > len_current_df:
-            value = len_current_df
-            sample_numbers[key] = len_current_df
-        current_type_df = current_type_df.sample(value)
-        # print(current_type_df)
-        if final_df is None:
-            final_df = current_type_df
-        else:
-            final_df = pd.concat([final_df, current_type_df], ignore_index=True)
-    if shuffle:
-        final_df = final_df.sample(frac=1).reset_index(drop=True)
-    return final_df, sample_numbers
+    if sample_numbers is None:
+        sample_numbers = {}
+        keys = np.unique(data_df['type'])
+        for key in keys:
+            val = np.sum(data_df['type'] == key)
+            sample_numbers[key] = val
+        return data_df, sample_numbers
+    else:
+        final_df = None
+        data_df = data_df.sample(frac=1).reset_index(drop=True)
+        for key, value in sample_numbers.items():
+            if value == 0:
+                continue
+            current_type_df = data_df[data_df['type'] == key]
+            len_current_df = len(current_type_df)
+            if len_current_df == 0:
+                print("event type not found")
+            if value > len_current_df:
+                value = len_current_df
+                sample_numbers[key] = len_current_df
+            if value > 0:
+                current_type_df = current_type_df.sample(value)
+                # print(current_type_df)
+                if final_df is None:
+                    final_df = current_type_df
+                else:
+                    final_df = pd.concat([final_df, current_type_df], ignore_index=True)
+        if shuffle:
+            final_df = final_df.sample(frac=1).reset_index(drop=True)
+        return final_df, sample_numbers
 
 
 class Data:
@@ -73,9 +82,9 @@ class Data:
 
     def get_all_object_ids(self):
         if self.df_metadata is not None:
-            return self.df_metadata[self.object_id_col_name]
+            return np.array(self.df_metadata[self.object_id_col_name])
         else:
-            return np.unique(self.df_data[self.object_id_col_name])
+            return np.unique(np.array(self.df_data[self.object_id_col_name]))
 
     def get_ids_of_event_type(self, target):
         if isinstance(target, int):
@@ -111,16 +120,17 @@ class Data:
     def get_object_type_number(self, object_id):
         if self.target_col_name is None:
             print("Target name not given")
-        object_type = np.array(
-            self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
-        return object_type[0][0]
+        index = self.df_metadata[self.object_id_col_name] == object_id
+        object_type = np.array(self.df_metadata[self.target_col_name][index])
+        #print(object_type)
+        return object_type[0]
 
     def get_object_type_for_PLAsTiCC(self, object_id):
         if self.target_col_name is None:
             print("Target name not given")
-        object_type = np.array(
-            self.df_metadata[self.target_col_name][np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
-        object_num = object_type[0][0]
+        index = self.df_metadata[self.object_id_col_name] == object_id
+        object_num = np.array(self.df_metadata[self.target_col_name][index])
+        object_num = object_num[0]
         if object_num == 90:
             return "SN-Ia"
         elif object_num == 67:
@@ -158,7 +168,7 @@ class Data:
             print("Target name not given")
         object_num = np.array(
             self.df_metadata[self.target_col_name][
-                np.argwhere(self.df_metadata[self.object_id_col_name_name] == object_id)])
+                np.argwhere(self.df_metadata[self.object_id_col_name] == object_id)])
         object_num = object_num[0][0]
         if (object_num == 90) | (object_num == 67) | (object_num == 52) | (object_num == 42) | (object_num == 62) | (
                 object_num == 95) | (object_num == 15) | (object_num == 64) | (object_num == 65):
@@ -176,7 +186,8 @@ class Data:
     def create_features_df(self, prediction_type_nos, features_path=None, sample_numbers=None,
                            decouple_prediction_bands=True,
                            decouple_pc_bands=False, mark_maximum=False, min_flux_threshold=20, num_pc_components=3,
-                           color_band_dict=None, use_random_current_date=False, plot_predicted_curve_of_type=None, plot_all_predictions = False):
+                           color_band_dict=None, use_random_current_date=False, plot_predicted_curve_of_type=None,
+                           plot_all_predictions=False, band_choice='z', save_fig_path = None, classifier=None):
 
         if plot_all_predictions:
             plot_predicted_curve_of_type = np.unique(self.df_metadata[self.target_col_name])
@@ -196,18 +207,25 @@ class Data:
             object_ids = self.get_all_object_ids()
             # data_object_ids = np.random.permutation(data_object_ids)
             self.df_data.sort([self.object_id_col_name, self.time_col_name])
+
+            current_dates=[]
             for object_id in tqdm(object_ids):
                 pc = PredictLightCurve(self, object_id=object_id)
                 current_date = None
                 if use_random_current_date:
-                    median_date = np.median(pc.lc.dates_of_maximum)
-                    current_date = median_date + random() * 50 - 25
+                    #median_date = np.median(pc.lc.dates_of_maximum)
+                    #current_date = median_date + random() * 50 - 25
+                    current_min = np.amin(pc.lc.df[self.time_col_name])
+                    current_max = np.amax(pc.lc.df[self.time_col_name])
+                    current_date = int(random() * (current_max - current_min) + current_min)
+                current_dates.append(current_date)
 
                 coeff_dict, num_pts_dict = pc.predict_lc_coeff(current_date=current_date,
                                                                num_pc_components=num_pc_components,
                                                                decouple_pc_bands=decouple_pc_bands,
                                                                decouple_prediction_bands=decouple_prediction_bands,
-                                                               min_flux_threshold=min_flux_threshold, bands=self.bands)
+                                                               min_flux_threshold=min_flux_threshold, bands=self.bands,
+                                                               band_choice=band_choice)
                 data_dict['id'].append(object_id)
                 for i, band in enumerate(self.bands):
                     for j in range(1, num_pc_components + 1):
@@ -227,12 +245,29 @@ class Data:
                         print("error: pass color of each band")
 
                     if object_type in plot_predicted_curve_of_type:
-                        fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
-                                                      mark_maximum=mark_maximum, axes_lims=False,
-                                                      object_name=str(object_type))
-                        fig.savefig('kilonova_curves/ZTF_KN_plots/'+str(object_type)+"_"+str(object_id))
+                        if classifier is not None:
+                            coeff_list = [[]]
+                            for band in self.bands:
+                                coeff_list[0].extend(coeff_dict[band])
+                            correct_pred = ((classifier.predict(coeff_list)[0]==1)&(object_type in self.prediction_type_nos))|((classifier.predict(coeff_list)[0]==0)&(object_type not in self.prediction_type_nos))
+                            print(correct_pred)
+                            if not correct_pred:
+                                fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
+                                                              mark_maximum=mark_maximum, axes_lims=False,
+                                                              object_name=str(object_type))
+                                if save_fig_path is not None:
+                                    fig.savefig(save_fig_path + str(object_type) + "_" + str(object_id))
+                        else:
+                            fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
+                                                          mark_maximum=mark_maximum, axes_lims=False,
+                                                          object_name=str(object_type))
+                            if save_fig_path is not None:
+                                fig.savefig(save_fig_path + str(object_type) + "_" + str(object_id))
                     plt.show()
                     plt.close('all')
+
+            if use_random_current_date ==True:
+                data_dict['curr_date'] = np.asarray(current_dates)
 
             data_df = pd.DataFrame(data_dict)
             data_df = data_df.sample(frac=1).reset_index(drop=True)
@@ -268,8 +303,8 @@ class Data:
 
                     colx_name = str(i) + "pc" + str(x + 1)
                     coly_name = str(i) + "pc" + str(y + 1)
-                    if mark_xlabel: ax_current.set_xlabel("PC" + str(x + 1))
-                    if mark_ylabel: ax_current.set_ylabel("PC" + str(y + 1))
+                    if mark_xlabel: ax_current.set_xlabel("PC" + str(x + 1), fontsize=20)
+                    if mark_ylabel: ax_current.set_ylabel("PC" + str(y + 1), fontsize=20)
 
                     PCx = class_features_df[colx_name].values
                     PCy = class_features_df[coly_name].values
@@ -284,9 +319,9 @@ class Data:
 
                     if set_ax_title:
                         if band_map is None:
-                            ax_current.set_title("PCs for " + str(band) + "-band")
+                            ax_current.set_title("PCs for " + str(band) + "-band", fontsize=20)
                         else:
-                            ax_current.set_title("PCs for " + str(band_map[band]) + "-band")
+                            ax_current.set_title("PCs for " + str(band_map[band]) + "-band", fontsize=20)
                     if label != "":
                         ax_current.legend(loc="upper right")
                     ax_current.set_aspect('equal', 'box')
@@ -312,13 +347,13 @@ class Data:
                                               color_band_dict=None, bands=bands, x_limits=x_limits, y_limits=y_limits,
                                               mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
                                               set_ax_title=set_ax_title,
-                                              label="")
+                                              label="non-KN")
         self.plot_features_correlation_helper(kn_df, fig=fig, band_map=band_map,
                                               color_band_dict=color_band_dict, bands=bands, x_limits=x_limits,
                                               y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
-                                              set_ax_title=set_ax_title, label="")
+                                              set_ax_title=set_ax_title, label="KN")
 
-        plt.show()
+        return fig
 
     def plot_band_correlation_helper(self, current_class_df, bands, color_band_dict=None, fig=None,
                                      x_limits=None, y_limits=None, mark_xlabel=False, mark_ylabel=False,
@@ -359,12 +394,12 @@ class Data:
                     if x_limits is not None: ax_current.set_xlim(x_limits)
                     if y_limits is not None: ax_current.set_ylim(y_limits)
                     if band_map is None:
-                        if mark_xlabel: ax_current.set_xlabel(x_band + " band")
-                        if mark_ylabel: ax_current.set_ylabel(y_band + " band")
+                        if mark_xlabel: ax_current.set_xlabel(x_band + " band", fontsize=20)
+                        if mark_ylabel: ax_current.set_ylabel(y_band + " band",fontsize=20)
                     else:
-                        if mark_xlabel: ax_current.set_xlabel(band_map[x_band] + " band")
-                        if mark_ylabel: ax_current.set_ylabel(band_map[y_band] + " band")
-                    if set_ax_title: ax_current.set_title("correlation for PC" + str(i + 1))
+                        if mark_xlabel: ax_current.set_xlabel(band_map[x_band] + " band",fontsize=20)
+                        if mark_ylabel: ax_current.set_ylabel(band_map[y_band] + " band", fontsize=20)
+                    if set_ax_title: ax_current.set_title("correlation for PC" + str(i + 1), fontsize=20)
                     if label != "":
                         ax_current.legend(loc="upper right")
                     ax_current.set_aspect('equal', 'box')
@@ -389,11 +424,11 @@ class Data:
         self.plot_band_correlation_helper(non_kn_df, bands=bands, fig=fig,
                                           color_band_dict=None, band_map=band_map, x_limits=x_limits, y_limits=y_limits,
                                           mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel, set_ax_title=set_ax_title,
-                                          label="")
+                                          label="non-KN")
         self.plot_band_correlation_helper(kn_df, bands=bands, fig=fig,
                                           color_band_dict=color_band_dict, band_map=band_map, x_limits=x_limits,
                                           y_limits=y_limits, mark_xlabel=mark_xlabel, mark_ylabel=mark_ylabel,
-                                          set_ax_title=set_ax_title, label="")
+                                          set_ax_title=set_ax_title, label="KN")
         # plt.xlabel(" correlation ")
 
-        plt.show()
+        return fig

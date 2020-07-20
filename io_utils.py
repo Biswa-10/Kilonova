@@ -6,13 +6,17 @@ from pathlib import Path
 
 
 def load_ztf_data(
-        filepath='/media/biswajit/drive/Kilonova_datasets/ZTF_20190512/ZTF_MSIP_MODEL64/ZTF_MSIP_NONIaMODEL0-0001_PHOT.FITS',
+        phot_path='/media/biswajit/drive/Kilonova_datasets/ZTF_20190512/ZTF_MSIP_MODEL64/ZTF_MSIP_NONIaMODEL0-0001_PHOT.FITS',
         drop_separators=True):
-    df_header, df_phot = read_fits(filepath)
-    data_ob = Data(df_metadata=Table.from_pandas(df_header), df_data=Table.from_pandas(df_phot),
+    df_header, df_phot = read_fits(phot_path)
+    df_header = Table.from_pandas(df_header)
+    df_phot = Table.from_pandas(df_phot)
+    df_phot['FLT'][df_phot['FLT'] == b'g '] = 'g'
+    df_phot['FLT'][df_phot['FLT'] == b'r '] = 'r'
+    data_ob = Data(df_metadata=df_header, df_data=df_phot,
                    object_id_col_name='SNID', time_col_name='MJD', target_col_name='SNTYPE',
                    band_col_name='FLT', flux_col_name='FLUXCAL', flux_err_col_name='FLUXCALERR',
-                   band_map={'g': 'g', 'r': 'r'})
+                   band_map={'g': 'g', 'r': 'r'}, bands=['g', 'r'])
     if drop_separators:
         data_ob.df_data = data_ob.df_data[data_ob.df_data[data_ob.time_col_name] != -777]
     return data_ob
@@ -56,19 +60,19 @@ def load_ztf_mixed(m_numbers=None):
         if (int(model_num) != 45) & (int(model_num) != 50):
             if rand_int < 10:
                 file_path = base_path + model_num + '/ZTF_MSIP_NONIaMODEL0-000' + str(rand_int) + '_PHOT.FITS'
-                current_ob = load_ztf_data(filepath=file_path)
+                current_ob = load_ztf_data(phot_path=file_path)
             else:
                 file_path = base_path + model_num + '/ZTF_MSIP_NONIaMODEL0-00' + str(rand_int) + '_PHOT.FITS'
-                current_ob = load_ztf_data(filepath=file_path)
+                current_ob = load_ztf_data(phot_path=file_path)
 
 
         else:
             if rand_int < 10:
                 file_path = base_path + model_num + '/ZTF_MSIP_NONIa-000' + str(rand_int) + '_PHOT.FITS'
-                current_ob = load_ztf_data(filepath=file_path)
+                current_ob = load_ztf_data(phot_path=file_path)
             else:
                 file_path = base_path + model_num + '/ZTF_MSIP_NONIa-00' + str(rand_int) + '_PHOT.FITS'
-                current_ob = load_ztf_data(filepath=file_path)
+                current_ob = load_ztf_data(phot_path=file_path)
 
         if data_ob is None:
             data_ob = current_ob

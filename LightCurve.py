@@ -19,6 +19,7 @@ class LightCurve:
         self.band_map = data_ob.band_map
         # print(input_df[band_col_name])
         self.points_of_maximum, self.dates_of_maximum = self.get_dates_of_maximum()
+        self.priority_regions = None
 
     def get_band_data(self, band):
         # print(self.band_col_name)
@@ -231,16 +232,17 @@ class LightCurve:
         priority_regions.sort(reverse=True, key=find_len)
         return priority_regions
 
-    def plot_max_flux_regions(self, color_band_dict, event_days_range=100, plot_points=False, priority=None):
-
-        priority_regions = self.find_region_priority(event_days_range)
+    def plot_max_flux_regions(self, color_band_dict, event_days_range=100, plot_points=False, priority=None,
+                              band=None, mark_label=True, mark_maximum=True, label_postfix="", xlims=None,
+                              alpha=1.0):
+        self.priority_regions = self.find_region_priority(event_days_range)
         if priority is not None:
             if priority <= 0:
                 print("Error in priority value, priority number must be greater than 1")
 
         fig = plt.figure(figsize=(12, 6))
 
-        for i, ranges in enumerate(priority_regions):
+        for i, ranges in enumerate(self.priority_regions):
 
             mid_pt = median(ranges)
             # print(mid_pt)
@@ -252,9 +254,11 @@ class LightCurve:
                                             plot_points=plot_points)
 
             else:
-                if (i < priority) | (len(ranges) == len(priority_regions[i - 1])):
+                if (i < priority) | (len(ranges) == len(self.priority_regions[i - 1])):
                     single_band_plot = self.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date,
-                                                             plot_points=plot_points)
+                                                             plot_points=plot_points, band=band, mark_label=mark_label,
+                                                             mark_maximum=mark_maximum, label_postfix=label_postfix, xlims=xlims,
+                                                             alpha=alpha)
                     ax = single_band_plot.gca()
                     ax.remove()
                     ax.figure = fig
