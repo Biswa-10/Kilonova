@@ -1,6 +1,5 @@
-import numpy as np
+import numpy as npgit
 from astropy.table import Table
-
 
 def load_metadata(file_path="/media/biswajit/drive/PLAsTiCC_data/training_set_metadata.csv"):
     df_meta_data = Table.read(file_path,delimiter=",")
