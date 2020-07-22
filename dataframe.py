@@ -256,7 +256,15 @@ class Data:
                                                               mark_maximum=mark_maximum, axes_lims=False,
                                                               object_name=str(object_type))
                                 if save_fig_path is not None:
-                                    fig.savefig(save_fig_path + str(object_type) + "_" + str(object_id))
+                                    fig.savefig(save_fig_path+"incorrect/" + str(object_type) + "_" + str(object_id))
+                            else:
+                                fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict,
+                                                              color_band_dict=color_band_dict,
+                                                              mark_maximum=mark_maximum, axes_lims=False,
+                                                              object_name=str(object_type))
+                                if save_fig_path is not None:
+                                    fig.savefig(save_fig_path +"correct/"+ str(object_type) + "_" + str(object_id))
+
                         else:
                             fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
                                                           mark_maximum=mark_maximum, axes_lims=False,
