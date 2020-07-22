@@ -97,7 +97,7 @@ class PredictLightCurve:
 
                 return result.x
 
-        return []
+        return np.zeros(self.num_pc_components)
 
     def get_mid_pt_dict(self):
 
@@ -178,7 +178,7 @@ class PredictLightCurve:
         return mid_point_dict
 
     def predict_lc_coeff(self, current_date, num_pc_components, bands, decouple_pc_bands, decouple_prediction_bands,
-                         min_flux_threshold, band_choice='z'):
+                         min_flux_threshold, band_choice='u'):
         self.current_date = current_date
         self.num_pc_components = num_pc_components
         self.bands = bands
@@ -210,6 +210,7 @@ class PredictLightCurve:
                 # print(band_df)
                 pcs = self.pcs[band]
                 if len(band_df) > 0:
+                    print(band)
 
                     binned_dates = self.get_binned_time(band_df)
                     if mid_point_date - self.num_prediction_days + 1 < self.prediction_start_date:
@@ -220,7 +221,7 @@ class PredictLightCurve:
                     b2 = b2.astype(int)
                     light_curve_seg = np.zeros(self.num_prediction_days)
                     light_curve_seg[b2[:]] = band_df[self.lc.brightness_col_name]
-                    initial_guess = np.amax(band_df[self.lc.brightness_col_name]) * np.array([.93, .03, .025])
+                    #initial_guess = np.amax(band_df[self.lc.brightness_col_name]) * np.array([.93, .03, .025])
                     initial_guess = np.zeros(self.num_pc_components)
                     result = minimize(calc_loss, initial_guess, args=(pcs, light_curve_seg))
                     coeff_all_band[band] = list(result.x)
@@ -239,7 +240,7 @@ class PredictLightCurve:
         return coeff_all_band, num_points_dict
 
     def plot_predicted_bands(self, all_band_coeff_dict, color_band_dict, mark_maximum=False, object_name=None,
-                             axes_lims=True, buffer_days=20):
+                             axes_lims=True, buffer_days=20, mark_threshold=True):
 
         fig = self.lc.plot_light_curve(color_band_dict=color_band_dict, alpha=0.3, mark_maximum=False, mark_label=False,
                                        plot_points=True)
@@ -294,6 +295,8 @@ class PredictLightCurve:
                      label="current date")
 
         ax = plt.gca()
+        if mark_threshold:
+            ax.axhline(y=self.min_flux_threshold, color='r', linestyle='--', label='band threshold')
         plt.text(.01, .94, "ID: " + str(self.lc.object_id), fontsize=15, transform=ax.transAxes)
         if object_name is not None:
             # print(self.lc.get_object_type_for_PLAsTiCC(object_id))

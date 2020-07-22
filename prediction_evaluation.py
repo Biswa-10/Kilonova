@@ -70,7 +70,7 @@ class PredictionEvaluation:
         if train_ob.prediction_type_nos.sort() == test_ob.prediction_type_nos.sort():
             self.prediction_type_nos = train_ob.prediction_type_nos
         else:
-            print("prediction type inconsistany")
+            print("prediction type inconsistant")
         if train_ob.num_pc_components == test_ob.num_pc_components:
             self.num_pc_components = train_ob.num_pc_components
         else:
@@ -89,28 +89,27 @@ class PredictionEvaluation:
             ax = fig.add_axes([0, 0, .9, .9])
 
         col_type_nos = np.array(self.performance_statistics_df.columns)
-        print(col_type_nos)
+        # print(col_type_nos)
         pred_col_names = [ztf_ob_type_name(item) for item in self.prediction_type_nos]
         non_pred_types = col_type_nos[~np.isin(col_type_nos, self.prediction_type_nos)]
-        print(pred_col_names)
+        # print(pred_col_names)
         non_pred_type_names = [ztf_ob_type_name(item) for item in non_pred_types]
         col_type_names = [ztf_ob_type_name(item) for item in col_type_nos]
-        print(col_type_nos)
-        print(non_pred_types)
 
-        print(np.where(np.in1d(non_pred_types, col_type_nos)))
+        # print(col_type_nos)
+        # print(non_pred_types)
+
+        # print(np.where(np.in1d(non_pred_types, col_type_nos)))
         ax.barh(col_type_names, self.performance_statistics_df.loc[1], alpha=.6, tick_label=col_type_names,
-                color='bisque', ec='black',
-                linewidth=1, label="total number of events")
+                color='bisque', ec='black', linewidth=1, label="total number of events")
         ax.barh(non_pred_type_names, self.performance_statistics_df[non_pred_types].loc[0], alpha=.6, color='red',
-                ec='black',
-                label='Correctly classified: class 0')
+                ec='black', label='Correctly classified: class 0')
         ax.barh(pred_col_names, self.performance_statistics_df[self.prediction_type_nos].loc[0], alpha=.6,
-                color='chartreuse', ec='black',
-                label='Correctly classified: class 1')
-        plt.rc('ytick', labelsize=10)
-        plt.rc('xtick', labelsize=10)
-        print(col_type_nos)
+                color='chartreuse', ec='black', label='Correctly classified: class 1')
+        #plt.rc('ytick', labelsize=15)
+        #plt.rc('xtick', labelsize=15)
+        ax.tick_params(axis='both', labelsize=20)
+        # print(col_type_nos)
         for i, v in enumerate(col_type_nos):
             ax.text(self.performance_statistics_df[v].values[1] + 10, i - .1,
                     str(self.performance_statistics_df[v].values[0]) + "/" + str(
@@ -127,9 +126,9 @@ class PredictionEvaluation:
     def get_performance_statistics_df(self):
         prediction_stat = {}
         for i, object_id in enumerate(self.test_ob.features_df['id']):
-            print(1)
+            # print(1)
             type_no = self.test_ob.features_df['type'].values[np.where(self.test_ob.features_df['id'] == object_id)][0]
-            print(self.train_sample_numbers)
+            # print(self.train_sample_numbers)
             num_training_events = self.train_sample_numbers[type_no]
             if num_training_events == 0:
                 type_no = 0
@@ -166,9 +165,9 @@ class PredictionEvaluation:
         ax.set(xticks=np.arange(cm.shape[1]),
                yticks=np.arange(cm.shape[0]),
                # ... and label them with the respective list entries
-               xticklabels=classes, yticklabels=classes,
-               ylabel='True label',
-               xlabel='Predicted label')
+               xticklabels=classes, yticklabels=classes)
+        ax.set_xlabel('True label', fontsize =20)
+        ax.set_ylabel('Predicted label', fontsize =20 )
 
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), rotation=0, ha="right",
@@ -188,8 +187,10 @@ class PredictionEvaluation:
     def get_ignored_events(self):
         unknown = ""
         dropped = ""
-        for key in self.train_sample_numbers:
-            if self.train_sample_numbers[key] == 0:
+        for key in self.test_sample_numbers:
+            if (key in self.train_sample_numbers.keys()) & (self.test_sample_numbers[key] != 0):
+                continue
+            else:
                 if self.test_sample_numbers[key] == 0:
                     if dropped == "":
                         dropped = ztf_ob_type_name(key)
@@ -218,8 +219,8 @@ class PredictionEvaluation:
         plt.ylim([0, 1])
         plt.xlim([0, .1])
         # plt.axis("square")
-        plt.ylabel('True Positive Rate')
-        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate',fontsize= 20)
+        plt.xlabel('False Positive Rate',fontsize=20)
         # plt.gca().set_aspect("equal")
 
     def prediction_type_names(self):
@@ -231,11 +232,11 @@ class PredictionEvaluation:
                 name = name + ", " + ztf_ob_type_name(type_no)
         return name
 
-    def plot_performance_statistics(self, y_score, save_fig_path=None):
+    def plot_performance_statistics(self, y_score):
         fig = plt.figure(figsize=(24, 12))
         # plt.subplot2grid((12,25), (0,0), colspan=25, rowspan=1, fig = fig)
         # plt.title("performance statistics [Predict:"+self.prediction_type_names()+"]", loc = "center")
-        plt.subplot2grid((12, 24), (0, 3), colspan=11, rowspan=11, fig=fig)
+        plt.subplot2grid((12, 24), (0, 5), colspan=9, rowspan=11, fig=fig)
         self.plot_contamination_statistics(ax=plt.gca())
 
         fpr, tpr, thresholds = metrics.roc_curve(self.test_ob.features_df['y_true'].values, y_score[:, 1])
@@ -255,9 +256,9 @@ class PredictionEvaluation:
                      horizontalalignment='center', verticalalignment='top',
                      fontsize=20)
         plt.annotate('Training data [class 1: ' + str(
-            np.sum(self.performance_statistics_df[self.prediction_type_nos].loc[1].values)) + " | class 0:"
-                     + str(np.sum(self.performance_statistics_df.loc[1].values) - np.sum(
-            self.performance_statistics_df[self.prediction_type_nos].loc[1].values)) + "]",
+            np.sum(self.performance_statistics_df[self.prediction_type_nos].loc[2].values)) + " | class 0:"
+                     + str(np.sum(self.performance_statistics_df.loc[2].values) - np.sum(
+            self.performance_statistics_df[self.prediction_type_nos].loc[2].values)) + "]",
                      xy=(.79, .275), xycoords='figure fraction',
                      horizontalalignment='center', verticalalignment='top',
                      fontsize=20)
@@ -276,6 +277,4 @@ class PredictionEvaluation:
                      horizontalalignment='center', verticalalignment='top',
                      fontsize=10)
         fig.tight_layout()
-        if save_fig_path is not None:
-            fig.savefig('Final_Results/case7')
-        plt.show()
+        return fig
