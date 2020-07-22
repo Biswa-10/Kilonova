@@ -62,8 +62,6 @@ def calc_priodic_penalty(data_ob, object_df):
         penalty = np.log(np.abs(penalty)+1)
     return penalty
 
-
-
 def PLAsTiCC_transient_filter(data_ob, cut=8):
     object_ids = data_ob.get_all_object_ids()
     filter_result = np.zeros(len(object_ids), dtype=bool)
@@ -89,7 +87,6 @@ def PLAsTiCC_transient_filter(data_ob, cut=8):
     np.save("filter_result", filter_result)
     data_ob.df_metadata['filter_result'] = filter_result
     return filter_result
-
 
 def transient_filter_load_saved(data_ob, path="filter_result.npy"):
     filter_result = np.load(path)
