@@ -187,7 +187,8 @@ class Data:
                            decouple_prediction_bands=True,
                            decouple_pc_bands=False, mark_maximum=False, min_flux_threshold=20, num_pc_components=3,
                            color_band_dict=None, use_random_current_date=False, plot_predicted_curve_of_type=None,
-                           plot_all_predictions=False, band_choice='z', save_fig_path = None, classifier=None):
+                           plot_all_predictions=False, band_choice='z', save_fig_path = None, classifier=None,
+                           num_alert_days=None):
 
         if plot_all_predictions:
             plot_predicted_curve_of_type = np.unique(self.df_metadata[self.target_col_name])
@@ -225,7 +226,8 @@ class Data:
                                                                decouple_pc_bands=decouple_pc_bands,
                                                                decouple_prediction_bands=decouple_prediction_bands,
                                                                min_flux_threshold=min_flux_threshold, bands=self.bands,
-                                                               band_choice=band_choice)
+                                                               band_choice=band_choice,
+                                                               num_alert_days=num_alert_days)
                 data_dict['id'].append(object_id)
                 for i, band in enumerate(self.bands):
                     for j in range(1, num_pc_components + 1):
@@ -302,7 +304,7 @@ class Data:
             ax_list = fig.axes
 
         if self.bands is None:
-            bands = self.data_ob.band_map.keys()
+            bands = self.band_map.keys()
 
         for i, band in enumerate(bands):
             for x in range(self.num_pc_components):
@@ -440,3 +442,17 @@ class Data:
         # plt.xlabel(" correlation ")
 
         return fig
+
+    def discard_no_featues_events(self):
+        col_names = []
+        non_zero_index = np.ones((len(self.features_df)), dtype='bool')
+        for i in range(self.num_pc_components):
+            for j in range(len(self.bands)):
+                col_name = str(j)+'pc'+str(i+1)
+                non_zero_index = (non_zero_index)&(self.features_df[col_name]!=0)
+
+        self.features_df = self.features_df.drop[non_zero_index]
+        self.features_df.reset_index(drop=True, inplace=True)
+        self.df_data = self.df_data[np.isin(self.df_data[self.object_id_col_name], self.features_df['id'])]
+        self.df_metadata = self.df_metadata[np.isin(self.df_metadata[self.object_id_col_name], self.features_df['id'])]
+        _, self.sample_numbers = sample_from_df(self.features_df, self.sample_numbers)

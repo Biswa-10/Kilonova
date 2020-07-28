@@ -38,15 +38,14 @@ class PredictLightCurve:
         self.mid_point_dict = None
         self.prediction_start_date = np.inf
         self.prediction_end_date = 0
+        self.num_alert_days = None
+        self.data_start_date = np.inf
+        self.data_end_date = 0
 
-    def get_time_segment(self, start_date, end_date, current_date=None):
+    def get_time_segment(self, start_date, end_date):
         start_index = self.lc.df[self.lc.time_col_name] >= start_date
         end_index = self.lc.df[self.lc.time_col_name] <= end_date
-        if current_date is None:
-            return self.lc.df[start_index & end_index]
-        else:
-            past_index = self.lc.df[self.lc.time_col_name] <= current_date
-            return self.lc.df[start_index & end_index & past_index]
+        return self.lc.df[start_index & end_index]
 
     def get_pcs(self, num_pc_components, decouple_pc_bands=False, band_choice='z'):
 
@@ -90,10 +89,10 @@ class PredictLightCurve:
                 light_curve_seg = np.zeros(self.num_prediction_days)
                 light_curve_seg[b2[:]] = fit_df[self.lc.brightness_col_name]
                 # initial_guess = np.amax(fit_df[self.lc.brightness_col_name])*np.array([.93,.03 ,.025])
-                #initial_guess = np.asarray([.93, .03, .025])
+                # initial_guess = np.asarray([.93, .03, .025])
                 initial_guess = np.zeros(self.num_pc_components)
                 result = minimize(calc_loss, initial_guess, args=(self.pcs, light_curve_seg))
-                #result = minimize(calc_loss, args=(self.pcs, light_curve_seg))
+                # result = minimize(calc_loss, args=(self.pcs, light_curve_seg))
 
                 return result.x
 
@@ -104,10 +103,9 @@ class PredictLightCurve:
         mid_point_dict = {}
 
         event_df = self.lc.df
-
         if self.current_date is not None:
             date_difference = event_df[self.lc.time_col_name] - self.current_date
-            past_index = (date_difference >= -50) & (date_difference <= 0)
+            past_index = (date_difference >= -self.num_alert_days) & (date_difference <= 0)
             event_df = event_df[past_index]
             # print(event_df)
             if not self.decouple_prediction_bands:
@@ -146,7 +144,6 @@ class PredictLightCurve:
             priority_region1 = priority_regions[0]
             median = np.median(np.asarray(priority_region1))
             event_df = self.get_time_segment(median - 50, median + 50)
-
             if self.decouple_prediction_bands:
                 for band in self.bands:
                     # print(band)
@@ -177,8 +174,14 @@ class PredictLightCurve:
 
         return mid_point_dict
 
+    def get_alert_segment(self, current_date, num_alert_days):
+        upper_time_lim_index = self.lc.df[self.lc.time_col_name] <= current_date
+        lower_time_lim_index = self.lc.df[self.lc.time_col_name] >= current_date - num_alert_days
+
+        return self.lc.df[upper_time_lim_index & lower_time_lim_index]
+
     def predict_lc_coeff(self, current_date, num_pc_components, bands, decouple_pc_bands, decouple_prediction_bands,
-                         min_flux_threshold, band_choice='u'):
+                         min_flux_threshold, band_choice='u', num_alert_days=None):
         self.current_date = current_date
         self.num_pc_components = num_pc_components
         self.bands = bands
@@ -187,11 +190,15 @@ class PredictLightCurve:
 
         self.min_flux_threshold = min_flux_threshold
         self.num_prediction_days = 51
+        if current_date is not None:
+            if num_alert_days is None:
+                num_alert_days = 50
+        self.num_alert_days = num_alert_days
         self.mid_point_dict = self.get_mid_pt_dict()
+
 
         coeff_all_band = {}
         num_points_dict = {}
-
         if self.mid_point_dict is not None:
 
             for band in self.bands:
@@ -203,7 +210,13 @@ class PredictLightCurve:
 
                 prediction_start_date = mid_point_date - (self.num_prediction_days - 1)
                 prediction_end_date = mid_point_date + (self.num_prediction_days - 1)
-                event_df = self.get_time_segment(prediction_start_date, prediction_end_date, self.current_date)
+                if current_date is None:
+                    self.data_start_date = prediction_start_date
+                    self.data_end_date = prediction_end_date
+                else:
+                    self.data_start_date = current_date - self.num_alert_days
+                    self.data_end_date = current_date
+                event_df = self.get_time_segment(self.data_start_date, self.data_end_date)
 
                 band_index = event_df[self.lc.band_col_name] == band
                 band_df = event_df[band_index]
@@ -221,7 +234,7 @@ class PredictLightCurve:
                     b2 = b2.astype(int)
                     light_curve_seg = np.zeros(self.num_prediction_days)
                     light_curve_seg[b2[:]] = band_df[self.lc.brightness_col_name]
-                    #initial_guess = np.amax(band_df[self.lc.brightness_col_name]) * np.array([.93, .03, .025])
+                    # initial_guess = np.amax(band_df[self.lc.brightness_col_name]) * np.array([.93, .03, .025])
                     initial_guess = np.zeros(self.num_pc_components)
                     result = minimize(calc_loss, initial_guess, args=(pcs, light_curve_seg))
                     coeff_all_band[band] = list(result.x)
@@ -256,16 +269,19 @@ class PredictLightCurve:
 
                     if self.current_date is None:
                         end_date = mid_point_date + 50
+                        start_date= mid_point_date - 50
+
                     else:
                         end_date = self.current_date
+                        start_date = self.current_date - self.num_alert_days
 
                     if mark_maximum:
-                        fig = self.lc.plot_light_curve(color_band_dict, fig=fig, start_date=mid_point_date - 50,
-                                                       end_date=end_date, band=band, alpha=1, mark_maximum=True,
+                        fig = self.lc.plot_light_curve(color_band_dict, fig=fig, start_date=self.data_start_date,
+                                                       end_date=self.data_end_date, band=band, alpha=1, mark_maximum=True,
                                                        plot_points=True)
                     else:
-                        fig = self.lc.plot_light_curve(color_band_dict, fig=fig, start_date=mid_point_date - 50,
-                                                       end_date=end_date, band=band, alpha=1, mark_maximum=False,
+                        fig = self.lc.plot_light_curve(color_band_dict, fig=fig, start_date=self.data_start_date,
+                                                       end_date=self.data_end_date, band=band, alpha=1, mark_maximum=False,
                                                        plot_points=True)
 
                     if len(coeff) != 0:
