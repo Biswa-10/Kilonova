@@ -241,6 +241,7 @@ class Data:
                     data_dict[col_name].append(num_pts_dict[band])
                 object_type = self.get_object_type_number(object_id)
                 data_dict['type'].append(object_type)
+
                 if plot_predicted_curve_of_type is not None:
 
                     if color_band_dict is None:
@@ -253,6 +254,7 @@ class Data:
                                 coeff_list[0].extend(coeff_dict[band])
                             correct_pred = ((classifier.predict(coeff_list)[0]==1)&(object_type in self.prediction_type_nos))|((classifier.predict(coeff_list)[0]==0)&(object_type not in self.prediction_type_nos))
                             print(correct_pred)
+                            print("----------------------------------------------------------------------")
                             if not correct_pred:
                                 fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
                                                               mark_maximum=mark_maximum, axes_lims=False,
@@ -273,8 +275,8 @@ class Data:
                                                           object_name=str(object_type))
                             if save_fig_path is not None:
                                 fig.savefig(save_fig_path + str(object_type) + "_" + str(object_id))
-                    plt.show()
-                    plt.close('all')
+                        plt.show()
+                        plt.close('all')
 
             if use_random_current_date ==True:
                 data_dict['curr_date'] = np.asarray(current_dates)
@@ -451,7 +453,7 @@ class Data:
                 col_name = str(j)+'pc'+str(i+1)
                 non_zero_index = (non_zero_index)&(self.features_df[col_name]!=0)
 
-        self.features_df = self.features_df.drop[non_zero_index]
+        self.features_df = self.features_df[non_zero_index]
         self.features_df.reset_index(drop=True, inplace=True)
         self.df_data = self.df_data[np.isin(self.df_data[self.object_id_col_name], self.features_df['id'])]
         self.df_metadata = self.df_metadata[np.isin(self.df_metadata[self.object_id_col_name], self.features_df['id'])]

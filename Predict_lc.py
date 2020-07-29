@@ -195,8 +195,12 @@ class PredictLightCurve:
                 num_alert_days = 50
         self.num_alert_days = num_alert_days
         self.mid_point_dict = self.get_mid_pt_dict()
-
-
+        if current_date is not None:
+            self.data_start_date = current_date - self.num_alert_days
+            self.data_end_date = current_date
+        else:
+            self.data_start_date = np.amin(self.lc.df[self.lc.time_col_name])
+            self.data_end_date = np.amax(self.lc.df[self.lc.time_col_name])
         coeff_all_band = {}
         num_points_dict = {}
         if self.mid_point_dict is not None:
@@ -213,17 +217,17 @@ class PredictLightCurve:
                 if current_date is None:
                     self.data_start_date = prediction_start_date
                     self.data_end_date = prediction_end_date
-                else:
-                    self.data_start_date = current_date - self.num_alert_days
-                    self.data_end_date = current_date
-                event_df = self.get_time_segment(self.data_start_date, self.data_end_date)
+
+
+
+                event_df = self.get_time_segment(max([self.data_start_date, prediction_start_date]),
+                                                     min([self.data_end_date, prediction_end_date]))
 
                 band_index = event_df[self.lc.band_col_name] == band
                 band_df = event_df[band_index]
                 # print(band_df)
                 pcs = self.pcs[band]
                 if len(band_df) > 0:
-                    print(band)
 
                     binned_dates = self.get_binned_time(band_df)
                     if mid_point_date - self.num_prediction_days + 1 < self.prediction_start_date:
@@ -269,7 +273,7 @@ class PredictLightCurve:
 
                     if self.current_date is None:
                         end_date = mid_point_date + 50
-                        start_date= mid_point_date - 50
+                        start_date = mid_point_date - 50
 
                     else:
                         end_date = self.current_date
@@ -277,11 +281,13 @@ class PredictLightCurve:
 
                     if mark_maximum:
                         fig = self.lc.plot_light_curve(color_band_dict, fig=fig, start_date=self.data_start_date,
-                                                       end_date=self.data_end_date, band=band, alpha=1, mark_maximum=True,
+                                                       end_date=self.data_end_date, band=band, alpha=1,
+                                                       mark_maximum=True,
                                                        plot_points=True)
                     else:
                         fig = self.lc.plot_light_curve(color_band_dict, fig=fig, start_date=self.data_start_date,
-                                                       end_date=self.data_end_date, band=band, alpha=1, mark_maximum=False,
+                                                       end_date=self.data_end_date, band=band, alpha=1,
+                                                       mark_maximum=False,
                                                        plot_points=True)
 
                     if len(coeff) != 0:
