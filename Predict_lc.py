@@ -242,7 +242,7 @@ class PredictLightCurve:
                     initial_guess = np.zeros(self.num_pc_components)
                     result = minimize(calc_loss, initial_guess, args=(pcs, light_curve_seg))
                     coeff_all_band[band] = list(result.x)
-                    print(result.x)
+                    #print(result.x)
                     num_points_dict[band] = len(b2)
 
                 else:
