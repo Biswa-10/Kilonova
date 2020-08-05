@@ -188,7 +188,7 @@ class Data:
                            decouple_pc_bands=False, mark_maximum=False, min_flux_threshold=20, num_pc_components=3,
                            color_band_dict=None, use_random_current_date=False, plot_predicted_curve_of_type=None,
                            plot_all_predictions=False, band_choice='z', save_fig_path = None, classifier=None,
-                           num_alert_days=None):
+                           num_alert_days=None, skip_random_date_event_types = None):
 
         if plot_all_predictions:
             plot_predicted_curve_of_type = np.unique(self.df_metadata[self.target_col_name])
@@ -214,11 +214,18 @@ class Data:
                 pc = PredictLightCurve(self, object_id=object_id)
                 current_date = None
                 if use_random_current_date:
-                    #median_date = np.median(pc.lc.dates_of_maximum)
-                    #current_date = median_date + random() * 50 - 25
-                    current_min = np.amin(pc.lc.df[self.time_col_name])
-                    current_max = np.amax(pc.lc.df[self.time_col_name])
-                    current_date = int(random() * (current_max - current_min) + current_min)
+                    if skip_random_date_event_types is not None:
+                        if self.get_object_type_number(object_id) not in skip_random_date_event_types:
+                            current_min = np.amin(pc.lc.df[self.time_col_name])
+                            current_max = np.amax(pc.lc.df[self.time_col_name])
+                            current_date = int(random() * (current_max - current_min) + current_min)
+
+                    else:
+                        #median_date = np.median(pc.lc.dates_of_maximum)
+                        #current_date = median_date + random() * 50 - 25
+                        current_min = np.amin(pc.lc.df[self.time_col_name])
+                        current_max = np.amax(pc.lc.df[self.time_col_name])
+                        current_date = int(random() * (current_max - current_min) + current_min)
                 current_dates.append(current_date)
 
                 coeff_dict, num_pts_dict = pc.predict_lc_coeff(current_date=current_date,
