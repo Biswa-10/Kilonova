@@ -235,6 +235,7 @@ class Data:
                                                                min_flux_threshold=min_flux_threshold, bands=self.bands,
                                                                band_choice=band_choice,
                                                                num_alert_days=num_alert_days)
+
                 data_dict['id'].append(object_id)
                 for i, band in enumerate(self.bands):
                     for j in range(1, num_pc_components + 1):
@@ -247,6 +248,7 @@ class Data:
                         data_dict[col_name] = []
                     data_dict[col_name].append(num_pts_dict[band])
                 object_type = self.get_object_type_number(object_id)
+
                 data_dict['type'].append(object_type)
 
                 if plot_predicted_curve_of_type is not None:

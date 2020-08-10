@@ -156,7 +156,7 @@ class PredictionEvaluation:
         # Compute confusion matrix
         cm = metrics.confusion_matrix(self.test_ob.features_df['y_true'], self.test_ob.features_df['y_pred'])
         # Only use the labels that appear in the data
-        classes = [1, 0]
+        classes = [0,1]
 
         # fig, ax = plt.subplots()
         im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
