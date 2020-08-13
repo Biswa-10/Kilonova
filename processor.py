@@ -37,11 +37,16 @@ def rfscore_pca(jd, fid, magpsf, sigmapsf, model=None, bands=None, num_pc_compon
     # Load pre-trained model `clf`
     if model is not None:
         clf = load_scikit_model(model.values[0])
+
+    #need to define this later
     else:
-        curdir = os.path.dirname(os.path.abspath(__file__))
-        model = curdir + 'models/pickle_model.pkl'
-        #clf = pickle.load(open(model, 'rb'))
-        clf = load_scikit_model(model)
+        clf = load_scikit_model("models/pickle_model.pkl")
+
+    #else:
+    #    curdir = os.path.dirname(os.path.abspath(__file__))
+    #    model = curdir + 'models/pickle_model.pkl'
+    #
+    #    clf = load_scikit_model(model)
 
         #remember to initialize bands and
 
@@ -52,7 +57,6 @@ def rfscore_pca(jd, fid, magpsf, sigmapsf, model=None, bands=None, num_pc_compon
         data = [mag2fluxcal_snana(*args) for args in zip(
             magpsf[id],
             sigmapsf[id])]
-        # flux, error = np.transpose(data)
         flux, error = np.transpose(data)
 
         # make a Pandas DataFrame with exploded series
@@ -89,25 +93,11 @@ def rfscore_pca(jd, fid, magpsf, sigmapsf, model=None, bands=None, num_pc_compon
 
     # Make predictions
     probabilities = clf.predict_proba(test_features)
-    print(probabilities)
-    # Take only probabilities to be Ia
+
+    # Take only probabilities to be KN
     to_return = np.zeros(len(jd), dtype=float)
     to_return[mask] = probabilities.T[1]
 
     return pd.Series(to_return)
 
 
-if __name__ == "__main__":
-    """ Execute the test suite """
-
-    globs = globals()
-    path = os.path.dirname(__file__)
-
-    ztf_alert_sample = 'file:///media/biswajit/drive/Kilonova_datasets/20191101'
-    globs["ztf_alert_sample"] = ztf_alert_sample
-
-    model_path = '{}/models/pickle_model.pkl'.format(path)
-    globs["model_path"] = model_path
-
-    # Run the test suite
-    spark_unit_tests(globs)
