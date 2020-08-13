@@ -107,9 +107,12 @@ def load_RESSPECT_data(phot_df_file_path="/media/biswajit/drive/Kilonova_dataset
 
 
 def create_alert_data_obj(data, bands):
+    band_map = {}
+    for item in bands:
+        band_map[item] = item
     data_ob = Data(df_metadata=data, df_data=data, object_id_col_name='SNID', time_col_name='MJD',
                    band_col_name='FLT', flux_col_name='FLUXCAL', flux_err_col_name='FLUXCALERR',
-                   band_map={'g': 'g', 'r': 'r'}, bands=bands)
+                   band_map=band_map, bands=bands)
     return data_ob
 
 

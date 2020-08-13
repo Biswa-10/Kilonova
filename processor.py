@@ -21,11 +21,14 @@ from astropy.table import Table
 import pickle
 
 @pandas_udf(DoubleType(), PandasUDFType.SCALAR)
-def rfscore_pca(jd, fid, magpsf, sigmapsf, model=None) -> pd.Series:
+def rfscore_pca(jd, fid, magpsf, sigmapsf, model=None, bands=None, num_pc_components= None, min_flux_threshold=None) -> pd.Series:
 
-    bands = ['g', 'r']
-    band_map = {'g': 'g', 'r': 'r'}
-    num_pc_components = 3
+    if bands is None:
+        bands = ['g', 'r']
+    if num_pc_components is None:
+        num_pc_components = 3
+    if min_flux_threshold is None:
+        min_flux_threshold = 200
     # Flag empty alerts
     mask = magpsf.apply(lambda x: np.sum(np.array(x) == np.array(x))) > 3
     if len(jd[mask]) == 0:
@@ -39,6 +42,8 @@ def rfscore_pca(jd, fid, magpsf, sigmapsf, model=None) -> pd.Series:
         model = curdir + 'models/pickle_model.pkl'
         #clf = pickle.load(open(model, 'rb'))
         clf = load_scikit_model(model)
+
+        #remember to initialize bands and
 
     test_features = []
     ids = pd.Series(range(len(jd)))
@@ -69,7 +74,7 @@ def rfscore_pca(jd, fid, magpsf, sigmapsf, model=None) -> pd.Series:
                                                        num_pc_components=3,
                                                        decouple_pc_bands=False,
                                                        decouple_prediction_bands=True,
-                                                       min_flux_threshold=200,
+                                                       min_flux_threshold=min_flux_threshold,
                                                        bands=bands,
                                                        band_choice='u')
 
