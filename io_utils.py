@@ -31,7 +31,7 @@ def load_ztf_train_data(
     data_ob = Data(df_metadata=df_header, df_data=df_phot,
                    object_id_col_name='SNID', time_col_name='MJD', target_col_name='SNTYPE',
                    band_col_name='FLT', flux_col_name='FLUXCAL', flux_err_col_name='FLUXCALERR',
-                   band_map={'g': 'g', 'r': 'r'})
+                   band_map={'g': 'g', 'r': 'r'}, bands=['g', 'r'])
     return data_ob
 
 
@@ -103,6 +103,13 @@ def load_RESSPECT_data(phot_df_file_path="/media/biswajit/drive/Kilonova_dataset
     data_ob = Data(df_metadata=df_meta_data, df_data=df_data, object_id_col_name='SNID', time_col_name='MJD',
                    band_col_name='FLT', flux_col_name='FLUXCAL', flux_err_col_name='FLUXCALERR',
                    band_map={'u': 'u', 'g': 'g', 'r': 'r', 'i': 'i', 'z': 'z', 'Y': 'y'})
+    return data_ob
+
+
+def create_alert_data_obj(data, bands):
+    data_ob = Data(df_metadata=data, df_data=data, object_id_col_name='SNID', time_col_name='MJD',
+                   band_col_name='FLT', flux_col_name='FLUXCAL', flux_err_col_name='FLUXCALERR',
+                   band_map={'g': 'g', 'r': 'r'}, bands=bands)
     return data_ob
 
 

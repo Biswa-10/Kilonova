@@ -50,7 +50,7 @@ class PredictLightCurve:
     def get_pcs(self, num_pc_components, decouple_pc_bands=False, band_choice='z'):
 
         if decouple_pc_bands:
-            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy")
+            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy",allow_pickle=True)
             pc_dict = pc_dict.item()
             pc_out = {0: pc_dict['u'][0:num_pc_components], 1: pc_dict['r'][0:num_pc_components],
                       2: pc_dict['i'][0:num_pc_components], 3: pc_dict['g'][0:num_pc_components],
@@ -60,7 +60,7 @@ class PredictLightCurve:
 
         else:
             pc_out = {}
-            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy")
+            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy",allow_pickle=True)
             pc_dict = pc_dict.item()
             for band in self.bands:
                 pc_out[band] = pc_dict[band_choice][0:num_pc_components]
