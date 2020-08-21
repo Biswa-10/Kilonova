@@ -230,7 +230,7 @@ class PredictLightCurve:
                 pcs = self.pcs[band]
                 if len(band_df) > 0:
 
-                    binned_dates = self.get_binned_time(band_df
+                    binned_dates = self.get_binned_time(band_df)
                     if mid_point_date - self.num_prediction_days + 1 < self.prediction_start_date:
                         self.prediction_start_date = mid_point_date - self.num_prediction_days + 1
                     if mid_point_date + self.num_prediction_days - 1 > self.prediction_end_date:
