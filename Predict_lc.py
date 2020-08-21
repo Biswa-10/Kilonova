@@ -50,7 +50,7 @@ class PredictLightCurve:
     def get_pcs(self, num_pc_components, decouple_pc_bands=False, band_choice='z'):
 
         if decouple_pc_bands:
-            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy",allow_pickle=True)
+            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy", allow_pickle=True)
             pc_dict = pc_dict.item()
             pc_out = {0: pc_dict['u'][0:num_pc_components], 1: pc_dict['r'][0:num_pc_components],
                       2: pc_dict['i'][0:num_pc_components], 3: pc_dict['g'][0:num_pc_components],
@@ -60,7 +60,10 @@ class PredictLightCurve:
 
         else:
             pc_out = {}
-            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy",allow_pickle=True)
+            if band_choice == 'all':
+                pc_dict = np.load("principal_components/PCs_shifted_mixed.npy", allow_pickle=True)
+            else:
+                pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy", allow_pickle=True)
             pc_dict = pc_dict.item()
             for band in self.bands:
                 pc_out[band] = pc_dict[band_choice][0:num_pc_components]
@@ -218,10 +221,8 @@ class PredictLightCurve:
                     self.data_start_date = prediction_start_date
                     self.data_end_date = prediction_end_date
 
-
-
                 event_df = self.get_time_segment(max([self.data_start_date, prediction_start_date]),
-                                                     min([self.data_end_date, prediction_end_date]))
+                                                 min([self.data_end_date, prediction_end_date]))
 
                 band_index = event_df[self.lc.band_col_name] == band
                 band_df = event_df[band_index]
@@ -229,7 +230,7 @@ class PredictLightCurve:
                 pcs = self.pcs[band]
                 if len(band_df) > 0:
 
-                    binned_dates = self.get_binned_time(band_df)
+                    binned_dates = self.get_binned_time(band_df
                     if mid_point_date - self.num_prediction_days + 1 < self.prediction_start_date:
                         self.prediction_start_date = mid_point_date - self.num_prediction_days + 1
                     if mid_point_date + self.num_prediction_days - 1 > self.prediction_end_date:
@@ -242,7 +243,7 @@ class PredictLightCurve:
                     initial_guess = np.zeros(self.num_pc_components)
                     result = minimize(calc_loss, initial_guess, args=(pcs, light_curve_seg))
                     coeff_all_band[band] = list(result.x)
-                    #print(result.x)
+                    # print(result.x)
                     num_points_dict[band] = len(b2)
 
                 else:
