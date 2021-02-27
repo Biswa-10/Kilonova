@@ -39,8 +39,10 @@ class LightCurve:
         for band, pb_name in self.band_map.items():
             # pb_name = band
             current_band_data = self.get_band_data(band)
+
             if len(current_band_data) > 0:
                 current_max_index = np.argmax(current_band_data[self.brightness_col_name])
+
                 current_max_date = current_band_data[self.time_col_name][current_max_index]
                 dates_of_maximum.append(current_max_date)
                 points_of_maximum[band] = [current_max_date,

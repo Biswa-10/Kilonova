@@ -47,10 +47,12 @@ class PredictLightCurve:
         end_index = self.lc.df[self.lc.time_col_name] <= end_date
         return self.lc.df[start_index & end_index]
 
-    def get_pcs(self, num_pc_components, decouple_pc_bands=False, band_choice='z'):
+    def get_pcs(self, num_pc_components, path=None, decouple_pc_bands=False, band_choice='z'):
 
         if decouple_pc_bands:
-            pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy", allow_pickle=True)
+            if path is None:
+                path = "principal_components/PC_all_bands_diff_mid_pt_dict.npy"
+            pc_dict = np.load(path, allow_pickle=True)
             pc_dict = pc_dict.item()
             pc_out = {0: pc_dict['u'][0:num_pc_components], 1: pc_dict['r'][0:num_pc_components],
                       2: pc_dict['i'][0:num_pc_components], 3: pc_dict['g'][0:num_pc_components],
@@ -60,10 +62,13 @@ class PredictLightCurve:
 
         else:
             pc_out = {}
-            if band_choice == 'all':
-                pc_dict = np.load("principal_components/PCs_shifted_mixed.npy", allow_pickle=True)
-            else:
-                pc_dict = np.load("principal_components/PC_all_bands_diff_mid_pt_dict.npy", allow_pickle=True)
+            if path is None:
+                if band_choice == 'all':
+                    path = "principal_components/PCs_shifted_mixed.npy"
+                else:
+                    path = "principal_components/PC_all_bands_diff_mid_pt_dict.npy"
+
+            pc_dict = np.load(path, allow_pickle=True)
             pc_dict = pc_dict.item()
             for band in self.bands:
                 pc_out[band] = pc_dict[band_choice][0:num_pc_components]
@@ -184,11 +189,12 @@ class PredictLightCurve:
         return self.lc.df[upper_time_lim_index & lower_time_lim_index]
 
     def predict_lc_coeff(self, current_date, num_pc_components, bands, decouple_pc_bands, decouple_prediction_bands,
-                         min_flux_threshold, band_choice='u', num_alert_days=None):
+                         min_flux_threshold, template_path=None, band_choice='u', num_alert_days=None):
         self.current_date = current_date
         self.num_pc_components = num_pc_components
         self.bands = bands
-        self.pcs = self.get_pcs(num_pc_components, decouple_pc_bands=decouple_pc_bands, band_choice=band_choice)
+        self.pcs = self.get_pcs(num_pc_components, path=template_path, decouple_pc_bands=decouple_pc_bands,
+                                band_choice=band_choice)
         self.decouple_prediction_bands = decouple_prediction_bands
 
         self.min_flux_threshold = min_flux_threshold
@@ -217,9 +223,9 @@ class PredictLightCurve:
 
                 prediction_start_date = mid_point_date - (self.num_prediction_days - 1)
                 prediction_end_date = mid_point_date + (self.num_prediction_days - 1)
-                if current_date is None:
-                    self.data_start_date = prediction_start_date
-                    self.data_end_date = prediction_end_date
+                # if current_date is None:
+                #    self.data_start_date = prediction_start_date
+                #    self.data_end_date = prediction_end_date
 
                 event_df = self.get_time_segment(max([self.data_start_date, prediction_start_date]),
                                                  min([self.data_end_date, prediction_end_date]))
@@ -258,10 +264,10 @@ class PredictLightCurve:
         return coeff_all_band, num_points_dict
 
     def plot_predicted_bands(self, all_band_coeff_dict, color_band_dict, mark_maximum=False, object_name=None,
-                             axes_lims=True, buffer_days=20, mark_threshold=True):
+                             axes_lims=True, buffer_days=20, mark_threshold=True, linestyle="solid", fig=None):
 
-        fig = self.lc.plot_light_curve(color_band_dict=color_band_dict, alpha=0.3, mark_maximum=False, mark_label=False,
-                                       plot_points=True)
+        fig = self.lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3, mark_maximum=False,
+                                       mark_label=False, plot_points=True)
 
         if self.mid_point_dict is not None:
             median_date = None
@@ -299,7 +305,7 @@ class PredictLightCurve:
                         predicted_lc = []
                         time_data = []
 
-                    plt.plot(time_data, predicted_lc, color=color_band_dict[band])
+                    plt.plot(time_data, predicted_lc, color=color_band_dict[band], linestyle=linestyle)
 
             if axes_lims:
                 if self.prediction_start_date is not np.inf:
@@ -319,15 +325,15 @@ class PredictLightCurve:
 
         ax = plt.gca()
         if mark_threshold:
-            ax.axhline(y=self.min_flux_threshold, color='r', linestyle='--', label='band threshold')
+            ax.axhline(y=self.min_flux_threshold, color='r', linestyle='--', label='threshold')
         plt.text(.01, .94, "ID: " + str(self.lc.object_id), fontsize=15, transform=ax.transAxes)
         if object_name is not None:
             # print(self.lc.get_object_type_for_PLAsTiCC(object_id))
             plt.text(.01, .88, "Type: " + object_name, fontsize=15, transform=ax.transAxes)
 
-        plt.xlabel("mjd", fontsize=20)
-        plt.ylabel("flux", fontsize=20)
-
+        plt.xlabel("mjd", fontsize=25)
+        plt.ylabel("flux", fontsize=25)
+        ax.tick_params(axis='both', which='major', labelsize=12)
         plt.legend(loc="upper right")
 
         return fig

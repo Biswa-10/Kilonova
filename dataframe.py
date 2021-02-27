@@ -122,7 +122,7 @@ class Data:
             print("Target name not given")
         index = self.df_metadata[self.object_id_col_name] == object_id
         object_type = np.array(self.df_metadata[self.target_col_name][index])
-        #print(object_type)
+        # print(object_type)
         return object_type[0]
 
     def get_object_type_for_PLAsTiCC(self, object_id):
@@ -187,8 +187,8 @@ class Data:
                            decouple_prediction_bands=True,
                            decouple_pc_bands=False, mark_maximum=False, min_flux_threshold=20, num_pc_components=3,
                            color_band_dict=None, use_random_current_date=False, plot_predicted_curve_of_type=None,
-                           plot_all_predictions=False, band_choice='z', save_fig_path = None, classifier=None,
-                           num_alert_days=None, skip_random_date_event_types = None):
+                           plot_all_predictions=False, band_choice='z', save_fig_path=None, classifier=None,
+                           num_alert_days=None, skip_random_date_event_types=None):
 
         if plot_all_predictions:
             plot_predicted_curve_of_type = np.unique(self.df_metadata[self.target_col_name])
@@ -209,7 +209,7 @@ class Data:
             # data_object_ids = np.random.permutation(data_object_ids)
             self.df_data.sort([self.object_id_col_name, self.time_col_name])
 
-            current_dates=[]
+            current_dates = []
             for object_id in tqdm(object_ids):
                 pc = PredictLightCurve(self, object_id=object_id)
                 current_date = None
@@ -221,8 +221,8 @@ class Data:
                             current_date = int(random() * (current_max - current_min) + current_min)
 
                     else:
-                        #median_date = np.median(pc.lc.dates_of_maximum)
-                        #current_date = median_date + random() * 50 - 25
+                        # median_date = np.median(pc.lc.dates_of_maximum)
+                        # current_date = median_date + random() * 50 - 25
                         current_min = np.amin(pc.lc.df[self.time_col_name])
                         current_max = np.amax(pc.lc.df[self.time_col_name])
                         current_date = int(random() * (current_max - current_min) + current_min)
@@ -261,25 +261,30 @@ class Data:
                             coeff_list = [[]]
                             for band in self.bands:
                                 coeff_list[0].extend(coeff_dict[band])
-                            correct_pred = ((classifier.predict(coeff_list)[0]==1)&(object_type in self.prediction_type_nos))|((classifier.predict(coeff_list)[0]==0)&(object_type not in self.prediction_type_nos))
+                            correct_pred = ((classifier.predict(coeff_list)[0] == 1) & (
+                                        object_type in self.prediction_type_nos)) | (
+                                                       (classifier.predict(coeff_list)[0] == 0) & (
+                                                           object_type not in self.prediction_type_nos))
                             print(correct_pred)
                             print("----------------------------------------------------------------------")
                             if not correct_pred:
-                                fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
+                                fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict,
+                                                              color_band_dict=color_band_dict,
                                                               mark_maximum=mark_maximum, axes_lims=False,
                                                               object_name=str(object_type))
                                 if save_fig_path is not None:
-                                    fig.savefig(save_fig_path+"incorrect/" + str(object_type) + "_" + str(object_id))
+                                    fig.savefig(save_fig_path + "incorrect/" + str(object_type) + "_" + str(object_id))
                             else:
                                 fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict,
                                                               color_band_dict=color_band_dict,
                                                               mark_maximum=mark_maximum, axes_lims=False,
                                                               object_name=str(object_type))
                                 if save_fig_path is not None:
-                                    fig.savefig(save_fig_path +"correct/"+ str(object_type) + "_" + str(object_id))
+                                    fig.savefig(save_fig_path + "correct/" + str(object_type) + "_" + str(object_id))
 
                         else:
-                            fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict, color_band_dict=color_band_dict,
+                            fig = pc.plot_predicted_bands(all_band_coeff_dict=coeff_dict,
+                                                          color_band_dict=color_band_dict,
                                                           mark_maximum=mark_maximum, axes_lims=False,
                                                           object_name=str(object_type))
                             if save_fig_path is not None:
@@ -287,7 +292,7 @@ class Data:
                         plt.show()
                         plt.close('all')
 
-            if use_random_current_date ==True:
+            if use_random_current_date == True:
                 data_dict['curr_date'] = np.asarray(current_dates)
 
             data_df = pd.DataFrame(data_dict)
@@ -296,7 +301,7 @@ class Data:
         else:
             temp_df = pd.read_csv(features_path)
 
-        self.features_df, sample_numbers = sample_from_df(temp_df, sample_numbers, shuffle=True)
+        self.features_df, sample_numbers = git(temp_df, sample_numbers, shuffle=True)
         self.sample_numbers = sample_numbers
         self.add_y_val()
 
@@ -416,9 +421,9 @@ class Data:
                     if y_limits is not None: ax_current.set_ylim(y_limits)
                     if band_map is None:
                         if mark_xlabel: ax_current.set_xlabel(x_band + " band", fontsize=20)
-                        if mark_ylabel: ax_current.set_ylabel(y_band + " band",fontsize=20)
+                        if mark_ylabel: ax_current.set_ylabel(y_band + " band", fontsize=20)
                     else:
-                        if mark_xlabel: ax_current.set_xlabel(band_map[x_band] + " band",fontsize=20)
+                        if mark_xlabel: ax_current.set_xlabel(band_map[x_band] + " band", fontsize=20)
                         if mark_ylabel: ax_current.set_ylabel(band_map[y_band] + " band", fontsize=20)
                     if set_ax_title: ax_current.set_title("correlation for PC" + str(i + 1), fontsize=20)
                     if label != "":
@@ -459,8 +464,8 @@ class Data:
         non_zero_index = np.ones((len(self.features_df)), dtype='bool')
         for i in range(self.num_pc_components):
             for j in range(len(self.bands)):
-                col_name = str(j)+'pc'+str(i+1)
-                non_zero_index = (non_zero_index)&(self.features_df[col_name]!=0)
+                col_name = str(j) + 'pc' + str(i + 1)
+                non_zero_index = (non_zero_index) & (self.features_df[col_name] != 0)
 
         self.features_df = self.features_df[non_zero_index]
         self.features_df.reset_index(drop=True, inplace=True)
