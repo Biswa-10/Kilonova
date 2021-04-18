@@ -1,4 +1,4 @@
-from dataframe import Data
+from src.dataframe import Data
 from astropy.table import Table, vstack
 from random import random
 import numpy as np
