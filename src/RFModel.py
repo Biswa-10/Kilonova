@@ -101,9 +101,7 @@ class RFModel:
             temp_df = pd.read_csv(features_path)
         else:
             data_dict = {'id': [],
-                         'type': [],
-                         'prediction start date': [],
-                         'prediction end date': []}
+                         'type': []}
             object_ids = data_ob.get_all_object_ids()
             data_ob.df_data.sort([data_ob.object_id_col_name, data_ob.time_col_name])
             current_dates = []
@@ -138,16 +136,19 @@ class RFModel:
                         if col_name not in data_dict.keys():
                             data_dict[col_name] = []
                         data_dict[col_name].append(coeff_dict[band][j - 1])
+
                     col_name = str(i) + 'n'
                     if col_name not in data_dict.keys():
                         data_dict[col_name] = []
                     data_dict[col_name].append(num_pts_dict[band])
 
+                    col_name = str(i) + "mid_pt"
+                    if col_name not in data_dict.keys():
+                        data_dict[col_name] = []
+                    data_dict[col_name].append(pc.mid_point_dict[band])
+
                 object_type = data_ob.get_object_type_number(object_id)
                 data_dict['type'].append(object_type)
-
-                data_dict['prediction start date'].append(pc.prediction_start_date)
-                data_dict['prediction end date'].append(pc.prediction_end_date)
 
             if self.use_random_current_date:
                 data_dict['curr_date'] = np.asarray(current_dates)
@@ -240,7 +241,7 @@ class RFModel:
         :return:
         """
         # TODO: pass PCs to PredictLightCurve
-        pcs = get_pcs(num_pc_components=self.num_pc_components, bands= self.bands, decouple_pc_bands=False,
+        pcs = get_pcs(num_pc_components=self.num_pc_components, bands=self.bands, decouple_pc_bands=False,
                       band_choice='u')
         if not self.classifier_trained:
             print("train classifer and predict_test_data func")
@@ -261,12 +262,11 @@ class RFModel:
 
                 object_type = row['type']
                 object_id = row['id']
-                start_date = row['start_date']
-                end_date = row['end_date']
+
                 if object_type in plot_predicted_curve_of_type:
 
                     lc = LightCurve(data_ob=self.test_data_ob, object_id=object_id)
-                    fig = self.lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3,
+                    fig = lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3,
                                                    mark_maximum=False,
                                                    mark_label=False, plot_points=True)
 
@@ -278,26 +278,28 @@ class RFModel:
 
                     for i, band in enumerate(self.bands):
                         coeff_list = []
+                        mid_point = row[str(i) + "mid_pt"]
+                        mid_point = mid_point - mid_point % 2
+                        print(mid_point)
+                        if mid_point == 0:
+                            continue
                         for j in range(self.num_pc_components):
                             band_feature_col = str(i) + 'pc' + str(j + 1)
                             coeff_list.append(row[band_feature_col])
 
                         predicted_lc = calc_prediction(coeff_list, pcs[band])
-                        time_data = np.arange(start_date, end_date, 2)
-                        plt.plot(time_data, predicted_lc, color=color_band_dict[band], linestyle="solid")
+                        time_data = np.arange(mid_point - 50, mid_point + 52, 2)
+                        ax = fig.gca()
+                        ax.plot(time_data, predicted_lc, color=color_band_dict[band])
 
-                    if not correct_pred:
-                        fig = lc.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date, fig=fig,
-                                                  band=band, alpha=1,
-                                                  mark_maximum=False, plot_points=True)
-                        if save_fig_path is not None:
-                            fig.savefig(save_fig_path + "incorrect/" + str(object_type) + "_" + str(object_id))
-                    else:
-                        fig = lc.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date, fig=fig,
-                                                  band=band, alpha=1,
-                                                  mark_maximum=False, plot_points=True)
-                        if save_fig_path is not None:
-                            fig.savefig(save_fig_path + "correct/" + str(object_type) + "_" + str(object_id))
+                        fig = lc.plot_light_curve(color_band_dict, start_date=mid_point - 50, end_date=mid_point + 50,
+                                                  fig=fig, band=band, alpha=1, mark_maximum=False, plot_points=True)
+
+                    if save_fig_path is not None:
+                        if not correct_pred:
+                            fig.savefig(save_fig_path + "incorrect/" + str(object_type) + "_" + str(object_id)+".png")
+                        else:
+                            fig.savefig(save_fig_path + "correct/" + str(object_type) + "_" + str(object_id)+".png")
 
                 plt.show()
                 plt.close('all')
