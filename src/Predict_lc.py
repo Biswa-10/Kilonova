@@ -1,4 +1,4 @@
-from LightCurve import LightCurve
+from src.LightCurve import LightCurve
 import numpy as np
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
@@ -39,6 +39,45 @@ def calc_loss(coeff, PCs, light_curve_seg, bias=None):
     return error
 
 
+def get_pcs(num_pc_components, bands, path=None, decouple_pc_bands=False, band_choice='u'):
+    """
+    load PCs
+
+    :param bands: bands for which pcs are to be extracted.
+    :param num_pc_components: number of PCs to be used for predictions
+    :param path: path to saved PCs
+    :param decouple_pc_bands: If set to True, then corresponding PCs are used for each band. If set to False, then
+        then same set of PCs is used to fit all the bands
+    :param band_choice: choice of PCs if the same set of PCs are to be used for all predictions.
+    :return: dict of PCs
+    """
+    if decouple_pc_bands:
+        if path is None:
+            path = "data/principal_components/PC_all_bands_diff_mid_pt_dict.npy"
+        pc_dict = np.load(path, allow_pickle=True)
+        pc_dict = pc_dict.item()
+        pc_out = {0: pc_dict['u'][0:num_pc_components], 1: pc_dict['r'][0:num_pc_components],
+                  2: pc_dict['i'][0:num_pc_components], 3: pc_dict['g'][0:num_pc_components],
+                  4: pc_dict['z'][0:num_pc_components], 5: pc_dict['Y'][0:num_pc_components]}
+        # num_pc_components = int(num_pc_components)
+        # print(pc_dict['u'])
+
+    else:
+        pc_out = {}
+        if path is None:
+            if band_choice == 'all':
+                path = "data/principal_components/PCs_shifted_mixed.npy"
+            else:
+                path = "data/principal_components/PC_all_bands_diff_mid_pt_dict.npy"
+
+        pc_dict = np.load(path, allow_pickle=True)
+        pc_dict = pc_dict.item()
+        for band in bands:
+            pc_out[band] = pc_dict[band_choice][0:num_pc_components]
+
+    return pc_out
+
+
 class PredictLightCurve:
 
     def __init__(self, data_ob, object_id, num_pc_components=3):
@@ -58,6 +97,7 @@ class PredictLightCurve:
         self.num_alert_days = None
         self.data_start_date = np.inf
         self.data_end_date = 0
+        self.coeff_dict = None
 
     def get_time_segment(self, start_date, end_date):
         """
@@ -69,43 +109,6 @@ class PredictLightCurve:
         start_index = self.lc.df[self.lc.time_col_name] >= start_date
         end_index = self.lc.df[self.lc.time_col_name] <= end_date
         return self.lc.df[start_index & end_index]
-
-    def get_pcs(self, num_pc_components, path=None, decouple_pc_bands=False, band_choice='z'):
-        """
-        load PCs
-
-        :param num_pc_components: number of PCs to be used for predictions
-        :param path: path to saved PCs
-        :param decouple_pc_bands: If set to True, then corresponding PCs are used for each band. If set to False, then
-            then same set of PCs is used to fit all the bands
-        :param band_choice: choice of PCs if the same set of PCs are to be used for all predictions.
-        :return: dict of PCs
-        """
-        if decouple_pc_bands:
-            if path is None:
-                path = "principal_components/PC_all_bands_diff_mid_pt_dict.npy"
-            pc_dict = np.load(path, allow_pickle=True)
-            pc_dict = pc_dict.item()
-            pc_out = {0: pc_dict['u'][0:num_pc_components], 1: pc_dict['r'][0:num_pc_components],
-                      2: pc_dict['i'][0:num_pc_components], 3: pc_dict['g'][0:num_pc_components],
-                      4: pc_dict['z'][0:num_pc_components], 5: pc_dict['Y'][0:num_pc_components]}
-            # num_pc_components = int(num_pc_components)
-            # print(pc_dict['u'])
-
-        else:
-            pc_out = {}
-            if path is None:
-                if band_choice == 'all':
-                    path = "principal_components/PCs_shifted_mixed.npy"
-                else:
-                    path = "principal_components/PC_all_bands_diff_mid_pt_dict.npy"
-
-            pc_dict = np.load(path, allow_pickle=True)
-            pc_dict = pc_dict.item()
-            for band in self.bands:
-                pc_out[band] = pc_dict[band_choice][0:num_pc_components]
-
-        return pc_out
 
     def get_binned_time(self, df):
         """
@@ -245,7 +248,7 @@ class PredictLightCurve:
         return self.lc.df[upper_time_lim_index & lower_time_lim_index]
 
     def predict_lc_coeff(self, num_pc_components, bands, decouple_pc_bands, decouple_prediction_bands,
-                         min_flux_threshold, current_date = None, template_path=None, band_choice='u',
+                         min_flux_threshold, current_date=None, template_path=None, band_choice='u',
                          num_alert_days=None):
         """
         function to predict the coefficients of light-curve.
@@ -268,8 +271,8 @@ class PredictLightCurve:
         self.current_date = current_date
         self.num_pc_components = num_pc_components
         self.bands = bands
-        self.pcs = self.get_pcs(num_pc_components, path=template_path, decouple_pc_bands=decouple_pc_bands,
-                                band_choice=band_choice)
+        self.pcs = get_pcs(num_pc_components, bands=self.bands, path=template_path, decouple_pc_bands=decouple_pc_bands,
+                           band_choice=band_choice)
         self.decouple_prediction_bands = decouple_prediction_bands
 
         self.min_flux_threshold = min_flux_threshold
@@ -336,6 +339,8 @@ class PredictLightCurve:
                 coeff_all_band[band] = np.zeros(num_pc_components)
                 num_points_dict[band] = 0
 
+        self.coeff_dict = coeff_all_band
+
         return coeff_all_band, num_points_dict
 
     def plot_predicted_bands(self, all_band_coeff_dict, color_band_dict, mark_maximum=False, object_name=None,
@@ -343,7 +348,6 @@ class PredictLightCurve:
         """
         plot of predictions of each band
 
-        :param all_band_coeff_dict: coeff dict for all the bands
         :param color_band_dict: dict with colors corresponding to each band
         :param mark_maximum: option to mark maximum
         :param object_name: name/object type of the current object
