@@ -1,4 +1,4 @@
-from dataframe import Data
+from src.dataframe import Data
 import numpy as np
 import pandas as pd
 import matplotlib.gridspec as gridspec
