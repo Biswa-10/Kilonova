@@ -7,6 +7,7 @@ from src.Predict_lc import PredictLightCurve, calc_prediction, get_pcs
 from src.LightCurve import LightCurve
 from tqdm.notebook import tqdm
 from random import random
+import math
 
 
 def sample_from_df(data_df, sample_numbers=None, shuffle=False):
@@ -60,7 +61,29 @@ class RFModel:
                  min_flux_threshold=200, num_pc_components=3, use_random_current_date=False, bands=None,
                  band_choice='u', num_alert_days=None, skip_random_date_event_types=None, train_features_path=None,
                  test_features_path=None):
-
+        """
+        creates a pandas dataframe with the features.
+        Note that this function makes predictions and plots for all the data! [Todo: break down the plot part]
+        :param prediction_type_nos: list with the type numbers to be identified
+        :param train_features_path: if the train features are already calculated, pass path to the saved features
+        :param test_features_path: if the test features are already calculated, pass path to the saved features
+        :param sample_numbers_train: dict value that stores the number of events to be sampled in training set
+            corresponding to each type
+        :param sample_numbers_test: dict value that stores the number of events to be sampled in training set
+                corresponding to each type
+        :param decouple_prediction_bands: if True (recommended) each band will have its own midpoint. If False, the date
+           of mid point will be the same for all bands
+        :param decouple_pc_bands: use different sets of PCs for different bands (should be used only for LSST data)
+        :param min_flux_threshold: minimum value of the amplitude necessary to make predictions
+        :param num_pc_components: number of PC components to be used
+        :param use_random_current_date: Try to mimic alerts by choosing selecting data only upto a specific date for
+           making plots
+        :param band_choice: bands on which fit it to be generated
+        :param num_alert_days: the number of days of data to be considered for making fits (can be used in combination
+           with random_current_date
+        :param skip_random_date_event_types: ?? [Todo: remove this]
+        :return:
+        """
         self.train_data_ob = None
         self.test_data_ob = None
         self.train_features_path = train_features_path
@@ -87,8 +110,8 @@ class RFModel:
         self.classifier_trained = False
         self.use_number_of_points_per_band = False
 
-    def create_features_df(self, data_set, data_ob: Data = None, color_band_dict=None, plot_all_predictions=True,
-                           mark_maximum=False, plot_predicted_curve_of_type=None, save_fig_path=None):
+    def create_features_df(self, data_set, data_ob: Data = None):
+
         features_path = None
         if data_set == 'train':
             features_path = self.train_features_path
@@ -101,7 +124,9 @@ class RFModel:
             temp_df = pd.read_csv(features_path)
         else:
             data_dict = {'id': [],
-                         'type': []}
+                         'type': [],
+                         'pred_start_date': [],
+                         'pred_end_date': []}
             object_ids = data_ob.get_all_object_ids()
             data_ob.df_data.sort([data_ob.object_id_col_name, data_ob.time_col_name])
             current_dates = []
@@ -149,6 +174,9 @@ class RFModel:
 
                 object_type = data_ob.get_object_type_number(object_id)
                 data_dict['type'].append(object_type)
+
+                data_dict['pred_start_date'].append(pc.prediction_start_date)
+                data_dict['pred_end_date'].append(pc.prediction_end_date)
 
             if self.use_random_current_date:
                 data_dict['curr_date'] = np.asarray(current_dates)
@@ -213,31 +241,17 @@ class RFModel:
 
         return self.test_features_df[['id', 'y_pred']]
 
-    def plot_prediction(self, color_band_dict=None, plot_all_predictions=True, fig=None,
+    def plot_prediction(self, color_band_dict=None, plot_all_predictions=True,
                         mark_maximum=False, plot_predicted_curve_of_type=None, save_fig_path=None):
         """
         creates a pandas dataframe with the features.
         Note that this function makes predictions and plots for all the data! [Todo: break down the plot part]
-        :param prediction_type_nos: list with the type numbers to be identified
-        :param features_path: if the features are already calculated, add path to the saved features
-        :param sample_numbers: dict value that stores the number of events to be sampled corresponding to each type
-        :param decouple_prediction_bands: if True (recommended) each band will have its own midpoint. If False, the date
-            of mid point will be the same for all bands
-        :param decouple_pc_bands: use different sets of PCs for different bands (should be used only for LSST data)
+
         :param mark_maximum: mark the maximum recorded flux of each band on plots
-        :param min_flux_threshold: minimum value of the amplitude necessary to make predictions
-        :param num_pc_components: number of PC components to be used
         :param color_band_dict: dict with the different bands and the corresponding colors to be used to make plots
-        :param use_random_current_date: Try to mimic alerts by choosing selecting data only upto a specific date for
-            making plots
         :param plot_predicted_curve_of_type: plot predictions of curves only of certain types
         :param plot_all_predictions: plot predictions of all data types
-        :param band_choice: bands on which fit it to be generated
         :param save_fig_path: path in which the plots are to be saved
-        :param classifier: trained classified to be used for making predictions (will call classifier.predict)
-        :param num_alert_days: the number of days of data to be considered for making fits (can be used in combination
-            with random_current_date
-        :param skip_random_date_event_types: ?? [Todo: remove this]
         :return:
         """
         # TODO: pass PCs to PredictLightCurve
@@ -264,11 +278,9 @@ class RFModel:
                 object_id = row['id']
 
                 if object_type in plot_predicted_curve_of_type:
+                    fig = plt.figure(figsize=(10, 15))
 
                     lc = LightCurve(data_ob=self.test_data_ob, object_id=object_id)
-                    fig = lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3,
-                                                   mark_maximum=False,
-                                                   mark_label=False, plot_points=True)
 
                     coeff_list = [row[col_names]]
                     correct_pred = ((self.classifier.predict(coeff_list)[0] == 1) & (
@@ -276,13 +288,15 @@ class RFModel:
                                            (self.classifier.predict(coeff_list)[0] == 0) & (
                                            object_type not in self.prediction_type_nos))
 
+                    prediction = False
                     for i, band in enumerate(self.bands):
                         coeff_list = []
                         mid_point = row[str(i) + "mid_pt"]
+                        if math.isnan(mid_point):
+                            continue
                         mid_point = mid_point - mid_point % 2
                         print(mid_point)
-                        if mid_point == 0:
-                            continue
+                        prediction = True
                         for j in range(self.num_pc_components):
                             band_feature_col = str(i) + 'pc' + str(j + 1)
                             coeff_list.append(row[band_feature_col])
@@ -292,17 +306,33 @@ class RFModel:
                         ax = fig.gca()
                         ax.plot(time_data, predicted_lc, color=color_band_dict[band])
 
-                        fig = lc.plot_light_curve(color_band_dict, start_date=mid_point - 50, end_date=mid_point + 50,
+                        if self.use_random_current_date:
+                            current_date = row['curr_date']
+                            data_start_date = max(current_date - self.num_alert_days, mid_point - 50)
+                            data_end_date = min(current_date, mid_point + 50)
+                            plt.axvline(current_date)
+
+                        else:
+                            data_start_date = mid_point - 50
+                            data_end_date = mid_point + 50
+
+                        fig = lc.plot_light_curve(color_band_dict, start_date=data_start_date, end_date=data_end_date,
                                                   fig=fig, band=band, alpha=1, mark_maximum=False, plot_points=True)
 
-                    if save_fig_path is not None:
+                    if prediction and (save_fig_path is not None):
+                        #todo: fix bug when passing none
+                        fig = lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3,
+                                                  mark_maximum=False,
+                                                  mark_label=False, plot_points=True)
                         if not correct_pred:
-                            fig.savefig(save_fig_path + "incorrect/" + str(object_type) + "_" + str(object_id)+".png")
+                            fig.savefig(
+                                save_fig_path + "incorrect/" + str(object_type) + "_" + str(int(object_id)) + ".png")
                         else:
-                            fig.savefig(save_fig_path + "correct/" + str(object_type) + "_" + str(object_id)+".png")
+                            fig.savefig(
+                                save_fig_path + "correct/" + str(object_type) + "_" + str(int(object_id)) + ".png")
 
-                plt.show()
-                plt.close('all')
+                    plt.show()
+                    plt.close('all')
 
     def plot_features_correlation_helper(self, class_features_df, bands=None, color_band_dict=None, fig=None,
                                          x_limits=None, y_limits=None, mark_xlabel=False, mark_ylabel=False,
@@ -369,7 +399,7 @@ class RFModel:
         plots correlations between the PCs of each band
         :param class_features_df: dataframe of events of current class (KN and non-KN)
         :param bands: bands for which plots are to be generated
-        :param color_band_dict: colors to be used for corresponding bands
+        :param color_band_dict:test colors to be used for corresponding bands
         :param x_limits: x limits of the plot
         :param y_limits: y limits of the plot
         :param mark_xlabel: mark x label or not
@@ -491,18 +521,41 @@ class RFModel:
         # plt.xlabel(" correlation ")
         return fig
 
-    def discard_no_featues_events(self):
+    def discard_no_featues_train_events(self):
         """
         discards events if no fit it generated (minimum threshold is not crossed or no data points) have been made
         """
         col_names = []
-        non_zero_index = np.ones((len(self.features_df)), dtype='bool')
+        non_zero_index = np.ones((len(self.train_features_df)), dtype='bool')
         for i in range(self.num_pc_components):
             for j in range(len(self.bands)):
                 col_name = str(j) + 'pc' + str(i + 1)
-                non_zero_index = (non_zero_index) & (self.features_df[col_name] != 0)
-        self.features_df = self.features_df[non_zero_index]
-        self.features_df.reset_index(drop=True, inplace=True)
-        self.df_data = self.df_data[np.isin(self.df_data[self.object_id_col_name], self.features_df['id'])]
-        self.df_metadata = self.df_metadata[np.isin(self.df_metadata[self.object_id_col_name], self.features_df['id'])]
-        _, self.sample_numbers = sample_from_df(self.features_df, self.sample_numbers)
+                non_zero_index = non_zero_index & (self.train_features_df[col_name] != 0)
+
+        self.train_features_df = self.train_features_df[non_zero_index]
+        self.train_features_df.reset_index(drop=True, inplace=True)
+        self.train_data_ob.df_data = self.train_data_ob.df_data[
+            np.isin(self.train_data_ob.df_data[self.train_data_ob.object_id_col_name], self.train_features_df['id'])]
+        self.train_data_ob.df_metadata = self.train_data_ob.f_metadata[
+            np.isin(self.train_data_ob.df_metadata[self.train_data_ob.object_id_col_name],
+                    self.train_features_df['id'])]
+        _, self.sample_numbers_train = sample_from_df(self.train_features_df, self.sample_numbers_train)
+
+    def discard_no_featues_test_events(self):
+        """
+        discards events if no fit it generated (minimum threshold is not crossed or no data points) have been made
+        """
+        col_names = []
+        non_zero_index = np.ones((len(self.test_features_df)), dtype='bool')
+        for i in range(self.num_pc_components):
+            for j in range(len(self.bands)):
+                col_name = str(j) + 'pc' + str(i + 1)
+                non_zero_index = non_zero_index & (self.test_features_df[col_name] != 0)
+
+        self.test_features_df = self.test_features_df[non_zero_index]
+        self.test_features_df.reset_index(drop=True, inplace=True)
+        self.test_data_ob.df_data = self.test_data_ob.df_data[
+            np.isin(self.test_data_ob.df_data[self.test_data_ob.object_id_col_name], self.test_features_df['id'])]
+        self.test_data_ob.df_metadata = self.test_data_ob.f_metadata[
+            np.isin(self.test_data_ob.df_metadata[self.test_data_ob.object_id_col_name], self.test_features_df['id'])]
+        _, self.sample_numbers_test = sample_from_df(self.test_features_df, self.sample_numbers_test)
