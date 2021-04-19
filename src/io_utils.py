@@ -4,6 +4,55 @@ from random import random
 import numpy as np
 from pathlib import Path
 
+def ztf_ob_type_name(type_no: int):
+    if type_no == 141:
+        return '141: 91BG'
+    if type_no == 143:
+        return '143: Iax'
+    if type_no == 145:
+        return '145: point Ia'
+    if type_no == 150:
+        return '150: KN GW170817'
+    if type_no == 151:
+        return '151: KN Karsen 2017'
+    if type_no == 160:
+        return '160: Superluminous SN'
+    if type_no == 161:
+        return '161: pair instability SN'
+    if type_no == 162:
+        return '162: ILOT'
+    if type_no == 163:
+        return '163: CART'
+    if type_no == 164:
+        return '164: TDE'
+    if type_no == 170:
+        return '170: AGN'
+    if type_no == 180:
+        return '180: RRLyrae'
+    if type_no == 181:
+        return 'M 181: dwarf_flares'
+    if type_no == 183:
+        return '183: PHOEBE'
+    if type_no == 190:
+        return '190: uLens_BSR'
+    if type_no == 191:
+        return '191: uLens_Bachelet'
+    if type_no == 192:
+        return '192: uLens_STRING'
+    if type_no == 114:
+        return '114: MOSFIT-IIn'
+    if type_no == 113:
+        return '113: Core collapse Type II using pca '
+    if type_no == 112:
+        return '112: Core collapse Type II'
+    if type_no == 102:
+        return '102: MOSFIT-Ibc'
+    if type_no == 103:
+        return '103: Core collapse Type Ibc'
+    if type_no == 101:
+        return '101: Ia SN'
+    if type_no == 0:
+        return '0: Unknown'
 
 def load_ztf_data(
         phot_path='/media/biswajit/drive/Kilonova_datasets/ZTF_20190512/ZTF_MSIP_MODEL64/ZTF_MSIP_NONIaMODEL0-0001_PHOT.FITS',
