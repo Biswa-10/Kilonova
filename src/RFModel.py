@@ -10,6 +10,7 @@ from random import random
 import math
 from src.io_utils import ztf_ob_type_name
 from sklearn import metrics
+import pandas as pd
 
 
 def sample_from_df(data_df, sample_numbers=None, shuffle=False):
@@ -113,7 +114,15 @@ class RFModel:
         self.use_number_of_points_per_band = False
         self.performance_statistics_df = None
 
-    def create_features_df(self, data_set, data_ob: Data = None, discard_no_feature_events=True):
+    def create_features_df(self, data_set: str, data_ob: Data = None, discard_no_feature_events=True):
+        """
+        Computes the coefficients of all the events in the data object and stores them in self.train_features_df or
+        self.test_features_df based on the selection of dataset
+
+        :param data_set: either "train" or "test"
+        :param data_ob: corresponding data object
+        :param discard_no_feature_events: discard events where no prediction are made in any band
+        """
 
         features_path = None
         if data_set == 'train':
@@ -205,6 +214,11 @@ class RFModel:
                 self.discard_no_features_test_events()
 
     def get_features_col_names(self):
+        """
+        get the name of the features columns to be used for training/testing the classifier
+
+        :return: List of strings with the names of columns to be used by the classifier
+        """
 
         col_names = []
         for i, band in enumerate(self.bands):
@@ -217,7 +231,13 @@ class RFModel:
 
         return col_names
 
-    def train_model(self, use_number_of_points_per_band=False):
+    def train_model(self, use_number_of_points_per_band=False) -> pd.DataFrame:
+        """
+        function to train the classifier model
+
+        :param use_number_of_points_per_band: flag to either use the number of points in each band or not
+        :return: pandas dataframe with objects ID and the predicted classification of the objects in the training set
+        """
 
         if self.train_features_df is None:
             print("create training features")
@@ -231,43 +251,42 @@ class RFModel:
 
         predict = self.classifier.predict(features)
         y_score = self.classifier.predict_proba(features)
-        print(predict)
-        print("----------")
-        print(y_score)
-        print("----------")
 
         self.train_features_df['y_pred'] = predict
-        self.train_features_df['y_score'] = y_score[:,1]
+        self.train_features_df['y_score'] = y_score[:, 1]
         self.classifier_trained = True
 
         return self.train_features_df[['id', 'y_pred']]
 
-    def predict_test_data(self):
+    def predict_test_data(self) -> pd.DataFrame:
+        """
+        function to predict probability and score for the test data
 
+        :return: pandas dataframe with object ids, prediction, and probability score of test events
+        """
+        if self.test_features_df is None:
+            print("create test features")
+            # TODO: handle case properly
         col_names = self.get_features_col_names()
         features = self.test_features_df[col_names]
         if self.classifier_trained:
             predict = self.classifier.predict(features)
             y_score = self.classifier.predict_proba(features)
             self.test_features_df['y_pred'] = predict
-            self.test_features_df['y_score'] = y_score[:,1]
+            self.test_features_df['y_score'] = y_score[:, 1]
         else:
             print("Please train classifier first")
 
-        return self.test_features_df[['id', 'y_pred']]
+        return self.test_features_df[['id', 'y_pred', 'y-score']]
 
-    def plot_prediction(self, color_band_dict=None, plot_all_predictions=True,
-                        mark_maximum=False, plot_predicted_curve_of_type=None, save_fig_path=None):
+    def plot_prediction(self, color_band_dict=None, plot_predicted_curve_of_type=None, save_fig_path=None):
         """
-        creates a pandas dataframe with the features.
-        Note that this function makes predictions and plots for all the data! [Todo: break down the plot part]
+        plots predictions either for all data or a selected type
 
-        :param mark_maximum: mark the maximum recorded flux of each band on plots
         :param color_band_dict: dict with the different bands and the corresponding colors to be used to make plots
-        :param plot_predicted_curve_of_type: plot predictions of curves only of certain types
-        :param plot_all_predictions: plot predictions of all data types
-        :param save_fig_path: path in which the plots are to be saved
-        :return:
+        :param plot_predicted_curve_of_type: plot predictions of curves only of certain types. If left None, plots are
+            made for all events
+        :param save_fig_path: path in which the plots are to be saved. If left None, plots are not saved
         """
         # TODO: pass PCs to PredictLightCurve
         pcs = get_pcs(num_pc_components=self.num_pc_components, bands=self.bands, decouple_pc_bands=False,
@@ -280,7 +299,7 @@ class RFModel:
         if color_band_dict is None:
             print("error: pass color of each band")
 
-        if plot_all_predictions:
+        if plot_predicted_curve_of_type is None:
             plot_predicted_curve_of_type = self.test_features_df['type'].tolist()
 
         col_names = self.get_features_col_names()
@@ -618,7 +637,6 @@ class RFModel:
         """
         plot displaying total number of events and number of events correctly classified for each event type.
         :param ax: axes on which plot is to be made
-        :return:
         """
 
         if self.performance_statistics_df is None:
@@ -686,7 +704,7 @@ class RFModel:
         ax.set_ylabel('True label', fontsize=20)
 
         # Rotate the tick labels and set their alignment.
-        plt.setp(ax.get_xticklabels(), rotation=0, ha="right",
+        ax.setp(ax.get_xticklabels(), rotation=0, ha="right",
                  rotation_mode="anchor")
 
         # Loop over data dimensions and create text annotations.
@@ -703,6 +721,8 @@ class RFModel:
     def get_ignored_events(self):
         """
         gets event types that are ignored for during training and testing
+        :return unknown: List of events that were discarded only during training
+        :return dropped: List of events that were discarded during both training and testing
         """
         unknown = ""
         dropped = ""
@@ -732,31 +752,29 @@ class RFModel:
 
         :param fpr: false positive rate
         :param tpr: true positive rate
-        :param roc_auc: roc auc
+        :param roc_auc: roc auc score
         :param ax: axes object
-        :return:
         """
 
         if ax is None:
             fig = plt.figure(figsize=(5, 5))
             ax = fig.gca()
-        plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % roc_auc)
-        print(fpr)
-        print(tpr)
-        plt.title('Receiver Operating Characteristic')
-        plt.legend(loc='lower right')
+        ax.plot(fpr, tpr, 'b', label='AUC = %0.2f' % roc_auc)
+
+        ax.title('Receiver Operating Characteristic')
+        ax.legend(loc='lower right')
         # plt.plot([0, 1], [0, 1],'r--')
 
-        plt.ylim([0, 1])
-        plt.xlim([0, 1])
+        ax.ylim([0, 1])
+        ax.xlim([0, 1])
         # plt.axis("square")
-        plt.ylabel('True Positive Rate', fontsize=20)
-        plt.xlabel('False Positive Rate', fontsize=20)
+        ax.ylabel('True Positive Rate', fontsize=20)
+        ax.xlabel('False Positive Rate', fontsize=20)
         # plt.gca().set_aspect("equal")
 
     def prediction_type_names(self):
         """
-        :return: for each type number, returns the anme TODO:?????
+        :return: for each type number, returns the name TODO:?????
         """
         name = ""
         for type_no in self.prediction_type_nos:
@@ -766,11 +784,10 @@ class RFModel:
                 name = name + ", " + ztf_ob_type_name(type_no)
         return name
 
-    def plot_performance_statistics(self, y_score):
+    def plot_performance_statistics(self):
         """
         makes a plot with contamination statistics, roc curve, confusion matrix and train-test set metadata
 
-        :param y_score: prediction values for test dataset
         :return: figure with the plot
         """
 
@@ -781,10 +798,10 @@ class RFModel:
         # plt.title("performance statistics [Predict:"+self.prediction_type_names()+"]", loc = "center")
         plt.subplot2grid((12, 24), (0, 5), colspan=9, rowspan=11, fig=fig)
         self.plot_contamination_statistics(ax=plt.gca())
+        if ('y_true' not in self.test_features_df.keys()) | ('y_score' not in self.test_features_df.keys()):
+            self.predict_test_data()
         fpr, tpr, thresholds = metrics.roc_curve(self.test_features_df['y_true'].values,
                                                  self.test_features_df['y_score'].values)
-        print(fpr)
-        print(tpr)
         roc_auc = metrics.auc(fpr, tpr)
 
         plt.subplot2grid((12, 24), (0, 18), rowspan=3, colspan=5, fig=fig)
