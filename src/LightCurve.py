@@ -63,11 +63,11 @@ class LightCurve:
                          plot_points=False, mark_label=True, mark_maximum=True, label_postfix="", xlims=None,
                          alpha=1.0):
         """
-        plots a light curve
+        plots either only one band of a light curve or all the bands
 
         :param color_band_dict: mapping from band/filter name to color with which it is to be drawn
         :param fig: fig on which plot is to be made. New figure is created if nothing is passed
-        :param band: bands for which plots are to be drawn
+        :param band: band for which light curve is to be drawn (else plots are made for all the bands)
         :param start_date: start of plot region
         :param end_date: end of plot region
         :param plot_points: mark the recorded datapoints on the curve
@@ -141,12 +141,12 @@ class LightCurve:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
                                     color=color_band_dict[band],
-                                    label=pb_name + label_postfix if mark_label else "", fmt='o',
+                                    label= pb_name + " " + label_postfix if mark_label else "", fmt='o',
                                     alpha=alpha)
                     else:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
-                                    color=color_band_dict[band], label=pb_name + label_postfix if mark_label else "",
+                                    color=color_band_dict[band], label= + pb_name + " " + label_postfix if mark_label else "",
                                     alpha=alpha)
 
                 if mark_maximum:
@@ -165,8 +165,10 @@ class LightCurve:
 
         # ax.legend()
         # ax.remove()
-        plt.xlabel("mjd", fontsize=20)
-        plt.ylabel("flux", fontsize=20)
+        plt.xticks(fontsize=17)
+        plt.yticks(fontsize=17)
+        plt.xlabel("MJD", fontsize=30)
+        plt.ylabel("flux", fontsize=30)
         # fig.close()
 
         return fig

@@ -194,7 +194,7 @@ class RFModel:
                 lambda ob_id: 1 if data_ob.get_object_type_number(ob_id) in self.prediction_type_nos else 0)
             self.train_data_ob = data_ob
             if discard_no_feature_events:
-                self.discard_no_featues_train_events()
+                self.discard_no_features_train_events()
         elif data_set == 'test':
             self.test_features_df, self.sample_numbers_test = sample_from_df(temp_df, self.sample_numbers_test,
                                                                              shuffle=True)
@@ -202,7 +202,7 @@ class RFModel:
                 lambda ob_id: 1 if data_ob.get_object_type_number(ob_id) in self.prediction_type_nos else 0)
             self.test_data_ob = data_ob
             if discard_no_feature_events:
-                self.discard_no_featues_test_events()
+                self.discard_no_features_test_events()
 
     def get_features_col_names(self):
 
@@ -230,8 +230,14 @@ class RFModel:
         self.classifier.fit(features, self.train_features_df['y_true'])
 
         predict = self.classifier.predict(features)
+        y_score = self.classifier.predict_proba(features)
+        print(predict)
+        print("----------")
+        print(y_score)
+        print("----------")
 
         self.train_features_df['y_pred'] = predict
+        self.train_features_df['y_score'] = y_score[:,1]
         self.classifier_trained = True
 
         return self.train_features_df[['id', 'y_pred']]
@@ -242,7 +248,9 @@ class RFModel:
         features = self.test_features_df[col_names]
         if self.classifier_trained:
             predict = self.classifier.predict(features)
+            y_score = self.classifier.predict_proba(features)
             self.test_features_df['y_pred'] = predict
+            self.test_features_df['y_score'] = y_score[:,1]
         else:
             print("Please train classifier first")
 
@@ -285,7 +293,7 @@ class RFModel:
                 object_id = row['id']
 
                 if object_type in plot_predicted_curve_of_type:
-                    fig = plt.figure(figsize=(10, 15))
+                    fig = plt.figure(figsize=(15, 9))
 
                     lc = LightCurve(data_ob=self.test_data_ob, object_id=object_id)
 
@@ -311,26 +319,37 @@ class RFModel:
                         predicted_lc = calc_prediction(coeff_list, pcs[band])
                         time_data = np.arange(mid_point - 50, mid_point + 52, 2)
                         ax = fig.gca()
-                        ax.plot(time_data, predicted_lc, color=color_band_dict[band])
+                        ax.plot(time_data, predicted_lc, color=color_band_dict[band], label="band " + str(band) +
+                                                                                            " prediction")
 
-                        if self.use_random_current_date:
-                            current_date = row['curr_date']
-                            data_start_date = max(current_date - self.num_alert_days, mid_point - 50)
-                            data_end_date = min(current_date, mid_point + 50)
-                            plt.axvline(current_date)
+                    if self.use_random_current_date:
+                        current_date = row['curr_date']
+                        data_start_date = max(current_date - self.num_alert_days, mid_point - 50)
+                        data_end_date = min(current_date, mid_point + 50)
+                        ax_y_limits = plt.gca().get_ylim()
+                        plt.plot([current_date, current_date], [ax_y_limits[0] / 2, ax_y_limits[1] / 2], c='b', ls="--",
+                                 label="current date")
+                        fig = lc.plot_light_curve(color_band_dict, start_date=data_start_date, end_date=data_end_date,
+                                                  fig=fig, alpha=1, mark_maximum=False, plot_points=True,
+                                                  label_postfix="alert region")
 
-                        else:
-                            data_start_date = mid_point - 50
-                            data_end_date = mid_point + 50
+                    else:
+                        data_start_date = mid_point - 50
+                        data_end_date = mid_point + 50
 
                         fig = lc.plot_light_curve(color_band_dict, start_date=data_start_date, end_date=data_end_date,
-                                                  fig=fig, band=band, alpha=1, mark_maximum=False, plot_points=True)
+                                                  fig=fig, alpha=1, mark_maximum=False, plot_points=True,
+                                                  label_postfix="points for prediction")
 
+                    ax_x_limits = plt.gca().get_xlim()
+                    plt.axhline(self.min_flux_threshold, label="min amplitude threshold", c='m', ls="--")
+                    fig = lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3,
+                                              mark_maximum=False,
+                                              mark_label=True, plot_points=True, label_postfix="light curve")
+                    plt.legend(fontsize=15)
                     if prediction and (save_fig_path is not None):
                         # todo: fix bug when passing none
-                        fig = lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3,
-                                                  mark_maximum=False,
-                                                  mark_label=False, plot_points=True)
+
                         if not correct_pred:
                             fig.savefig(
                                 save_fig_path + "incorrect/" + str(object_type) + "_" + str(int(object_id)) + ".png")
@@ -528,42 +547,42 @@ class RFModel:
         # plt.xlabel(" correlation ")
         return fig
 
-    def discard_no_featues_train_events(self):
+    def discard_no_features_train_events(self):
         """
         discards events if no fit it generated (minimum threshold is not crossed or no data points) have been made
         """
         col_names = []
-        non_zero_index = np.ones((len(self.train_features_df)), dtype='bool')
+        non_zero_index = np.zeros((len(self.train_features_df)), dtype='bool')
         for i in range(self.num_pc_components):
             for j in range(len(self.bands)):
                 col_name = str(j) + 'pc' + str(i + 1)
-                non_zero_index = non_zero_index & (self.train_features_df[col_name] != 0)
+                non_zero_index = non_zero_index | (self.train_features_df[col_name] != 0)
 
         self.train_features_df = self.train_features_df[non_zero_index]
         self.train_features_df.reset_index(drop=True, inplace=True)
         self.train_data_ob.df_data = self.train_data_ob.df_data[
             np.isin(self.train_data_ob.df_data[self.train_data_ob.object_id_col_name], self.train_features_df['id'])]
-        self.train_data_ob.df_metadata = self.train_data_ob.f_metadata[
+        self.train_data_ob.df_metadata = self.train_data_ob.df_metadata[
             np.isin(self.train_data_ob.df_metadata[self.train_data_ob.object_id_col_name],
                     self.train_features_df['id'])]
         _, self.sample_numbers_train = sample_from_df(self.train_features_df, self.sample_numbers_train)
 
-    def discard_no_featues_test_events(self):
+    def discard_no_features_test_events(self):
         """
         discards events if no fit it generated (minimum threshold is not crossed or no data points) have been made
         """
         col_names = []
-        non_zero_index = np.ones((len(self.test_features_df)), dtype='bool')
+        non_zero_index = np.zeros((len(self.test_features_df)), dtype='bool')
         for i in range(self.num_pc_components):
             for j in range(len(self.bands)):
                 col_name = str(j) + 'pc' + str(i + 1)
-                non_zero_index = non_zero_index & (self.test_features_df[col_name] != 0)
+                non_zero_index = non_zero_index | (self.test_features_df[col_name] != 0)
 
         self.test_features_df = self.test_features_df[non_zero_index]
         self.test_features_df.reset_index(drop=True, inplace=True)
         self.test_data_ob.df_data = self.test_data_ob.df_data[
             np.isin(self.test_data_ob.df_data[self.test_data_ob.object_id_col_name], self.test_features_df['id'])]
-        self.test_data_ob.df_metadata = self.test_data_ob.f_metadata[
+        self.test_data_ob.df_metadata = self.test_data_ob.df_metadata[
             np.isin(self.test_data_ob.df_metadata[self.test_data_ob.object_id_col_name], self.test_features_df['id'])]
         _, self.sample_numbers_test = sample_from_df(self.test_features_df, self.sample_numbers_test)
 
@@ -663,8 +682,8 @@ class RFModel:
                yticks=np.arange(cm.shape[0]),
                # ... and label them with the respective list entries
                xticklabels=classes, yticklabels=classes)
-        ax.set_xlabel('True label', fontsize=20)
-        ax.set_ylabel('Predicted label', fontsize=20)
+        ax.set_xlabel('Predicted label', fontsize=20)
+        ax.set_ylabel('True label', fontsize=20)
 
         # Rotate the tick labels and set their alignment.
         plt.setp(ax.get_xticklabels(), rotation=0, ha="right",
@@ -722,12 +741,14 @@ class RFModel:
             fig = plt.figure(figsize=(5, 5))
             ax = fig.gca()
         plt.plot(fpr, tpr, 'b', label='AUC = %0.2f' % roc_auc)
+        print(fpr)
+        print(tpr)
         plt.title('Receiver Operating Characteristic')
         plt.legend(loc='lower right')
         # plt.plot([0, 1], [0, 1],'r--')
 
         plt.ylim([0, 1])
-        plt.xlim([0, .1])
+        plt.xlim([0, 1])
         # plt.axis("square")
         plt.ylabel('True Positive Rate', fontsize=20)
         plt.xlabel('False Positive Rate', fontsize=20)
@@ -760,8 +781,10 @@ class RFModel:
         # plt.title("performance statistics [Predict:"+self.prediction_type_names()+"]", loc = "center")
         plt.subplot2grid((12, 24), (0, 5), colspan=9, rowspan=11, fig=fig)
         self.plot_contamination_statistics(ax=plt.gca())
-
-        fpr, tpr, thresholds = metrics.roc_curve(self.test_features_df['y_true'].values, self.test_features_df['y_pred'].values)
+        fpr, tpr, thresholds = metrics.roc_curve(self.test_features_df['y_true'].values,
+                                                 self.test_features_df['y_score'].values)
+        print(fpr)
+        print(tpr)
         roc_auc = metrics.auc(fpr, tpr)
 
         plt.subplot2grid((12, 24), (0, 18), rowspan=3, colspan=5, fig=fig)

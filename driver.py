@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from src.RFModel import RFModel
 from pandas import DataFrame
 
-from src.prediction_evaluation import PredictionEvaluation
 
 
 def main():
