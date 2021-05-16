@@ -66,7 +66,7 @@ class RFModel:
                  test_features_path=None):
         """
         creates a pandas dataframe with the features.
-        Note that this function makes predictions and plots for all the data! [Todo: break down the plot part]
+        Note that this function makes predictions and plots for all the data!
         :param prediction_type_nos: list with the type numbers to be identified
         :param train_features_path: if the train features are already calculated, pass path to the saved features
         :param test_features_path: if the test features are already calculated, pass path to the saved features
@@ -84,7 +84,7 @@ class RFModel:
         :param band_choice: bands on which fit it to be generated
         :param num_alert_days: the number of days of data to be considered for making fits (can be used in combination
            with random_current_date
-        :param skip_random_date_event_types: ?? [Todo: remove this]
+        :param skip_random_date_event_types: skips using the random current date for certain event types
         :return:
         """
         self.train_data_ob = None
@@ -131,9 +131,11 @@ class RFModel:
         elif data_set == 'test':
             features_path = self.test_features_path
 
-        # Todo: handle file exception
         if features_path is not None:
-            temp_df = pd.read_csv(features_path)
+            try:
+                features_data_df = pd.read_csv(features_path)
+            except FileNotFoundError:
+                print("Features file not found!")
         else:
             data_dict = {'id': [],
                          'type': [],
@@ -192,9 +194,10 @@ class RFModel:
 
             if self.use_random_current_date:
                 data_dict['curr_date'] = np.asarray(current_dates)
-            data_df = pd.DataFrame(data_dict)
-            data_df = data_df.sample(frac=1).reset_index(drop=True)
-            temp_df = data_df
+            features_data_df = pd.DataFrame(data_dict)
+            features_data_df = features_data_df.sample(frac=1).reset_index(drop=True)
+
+        temp_df = features_data_df
 
         if data_set == 'train':
             self.train_features_df, self.sample_numbers_train = sample_from_df(temp_df, self.sample_numbers_train,
