@@ -20,7 +20,6 @@ def sample_from_df(data_df, sample_numbers=None, shuffle=False):
     :param sample_numbers: a dict with keys as event types and values as numbrer of objects of that type to be sampled.
         if not passed, the dict will be updated with number of events of each type.
     :param shuffle: shuffle the output (if false then objects of same type will be placed together)
-    ????
     :return: final_df: data after sampling required number of events
              sample_numbers: final dict with number of events of each type
     """
@@ -350,26 +349,25 @@ class RFModel:
                         ax.plot(time_data, predicted_lc, color=color_band_dict[band], label="band " + str(band) +
                                                                                             " prediction")
 
-                    if self.use_random_current_date:
-                        current_date = row['curr_date']
-                        data_start_date = max(current_date - self.num_alert_days, mid_point - 50)
-                        data_end_date = min(current_date, mid_point + 50)
-                        ax_y_limits = plt.gca().get_ylim()
-                        plt.plot([current_date, current_date], [ax_y_limits[0] / 2, ax_y_limits[1] / 2], c='b', ls="--",
-                                 label="current date")
-                        fig = lc.plot_light_curve(color_band_dict, start_date=data_start_date, end_date=data_end_date,
-                                                  fig=fig, alpha=1, mark_maximum=False, plot_points=True,
-                                                  label_postfix="alert region")
+                        if self.use_random_current_date:
+                            current_date = row['curr_date']
+                            band_data_start_date = max(current_date - self.num_alert_days, mid_point - 50)
+                            band_data_end_date = min(current_date, mid_point + 50)
+                            ax_y_limits = plt.gca().get_ylim()
+                            plt.plot([current_date, current_date], [ax_y_limits[0] / 2, ax_y_limits[1] / 2], c='b',
+                                     ls="--", label="current date")
+                            prediction_points_label = "alert region"
 
-                    else:
-                        data_start_date = mid_point - 50
-                        data_end_date = mid_point + 50
+                        else:
+                            band_data_start_date = mid_point - 50
+                            band_data_end_date = mid_point + 50
 
-                        fig = lc.plot_light_curve(color_band_dict, start_date=data_start_date, end_date=data_end_date,
-                                                  fig=fig, alpha=1, mark_maximum=False, plot_points=True,
-                                                  label_postfix="points for prediction")
+                            prediction_points_label = "prediction region"
 
-                    ax_x_limits = plt.gca().get_xlim()
+                        fig = lc.plot_light_curve(color_band_dict, start_date=band_data_start_date, band=band,
+                                                  end_date=band_data_end_date, fig=fig, alpha=1, mark_maximum=False,
+                                                  plot_points=True, label_postfix=prediction_points_label)
+
                     plt.axhline(self.min_flux_threshold, label="min amplitude threshold", c='m', ls="--")
                     fig = lc.plot_light_curve(fig=fig, color_band_dict=color_band_dict, alpha=0.3,
                                               mark_maximum=False,
