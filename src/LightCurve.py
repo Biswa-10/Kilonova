@@ -60,7 +60,7 @@ class LightCurve:
         return points_of_maximum, dates_of_maximum
 
     def plot_light_curve(self, color_band_dict, fig=None, band=None, start_date=None, end_date=None,
-                         plot_points=False, mark_label=True, mark_maximum=True, label_postfix="", xlims=None,
+                         plot_points=False, mark_label=True, mark_maximum=True, label_postfix="", clip_xlims=None,
                          alpha=1.0):
         """
         plots either only one band of a light curve or all the bands
@@ -74,7 +74,7 @@ class LightCurve:
         :param mark_label: to put label or not
         :param mark_maximum: if True, marks the point with highest flux reading for each band
         :param label_postfix: post fix on label after band name
-        :param xlims: ??? [TODO: Change to boolean]
+        :param clip_xlims: plots only the region of prediction if set to true
         :param alpha: alpha value of the lines/points that are to be plotted
         :return: Figure with the plots
         """
@@ -114,7 +114,7 @@ class LightCurve:
                 if mark_maximum:
                     fig = self.mark_maximum_in_plot(color_band_dict=color_band_dict, fig=fig, band=band,
                                                     start_date=start_date, end_date=end_date)
-                if xlims is not None:
+                if clip_xlims is not None:
                     ax.set_xlim([start_date, end_date])
 
             else:
@@ -160,7 +160,7 @@ class LightCurve:
             max_date = np.amax(self.df[self.time_col_name])
 
             # ax.plot([start_date, end_date], [0, 0], label='y=0')
-            if xlims is not None:
+            if clip_xlims is not None:
                 ax.set_xlim([start_date, end_date])
 
         # ax.legend()
@@ -302,7 +302,7 @@ class LightCurve:
         return priority_regions
 
     def plot_max_flux_regions(self, color_band_dict, event_days_range=100, plot_points=False, priority=None,
-                              band=None, mark_label=True, mark_maximum=True, label_postfix="", xlims=None,
+                              band=None, mark_label=True, mark_maximum=True, label_postfix="", clip_xlims=None,
                               alpha=1.0):
         """
         plots the region of light curve where most of the band maximums are located.
@@ -314,7 +314,7 @@ class LightCurve:
         :param mark_label: to put label or not
         :param mark_maximum: if True, marks the point with highest flux reading for each band
         :param label_postfix: post fix on label after band name
-        :param xlims: ??? [TODO: Change to boolean]
+        :param clip_xlims: plots only the region of prediction if set to true
         :param alpha: alpha value of the lines/points that are to be plotted
         :return: figure with the plots
         """
@@ -340,8 +340,8 @@ class LightCurve:
                 if (i < priority) | (len(ranges) == len(self.priority_regions[i - 1])):
                     single_band_plot = self.plot_light_curve(color_band_dict, start_date=start_date, end_date=end_date,
                                                              plot_points=plot_points, band=band, mark_label=mark_label,
-                                                             mark_maximum=mark_maximum, label_postfix=label_postfix, xlims=xlims,
-                                                             alpha=alpha)
+                                                             mark_maximum=mark_maximum, label_postfix=label_postfix,
+                                                             clip_xlims=clip_xlims, alpha=alpha)
                     ax = single_band_plot.gca()
                     ax.remove()
                     ax.figure = fig
