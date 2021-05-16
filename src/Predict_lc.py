@@ -6,11 +6,11 @@ import matplotlib.pyplot as plt
 
 def calc_prediction(coeff, PCs, bias=None):
     """
-    given teh coefficients and PCs, it calculates the prediction as a linear combination
+    given the coefficients and PCs, it calculates the prediction as a linear combination
 
     :param coeff: coefficients of the linear combinations for the PCs
     :param PCs: The PCs that are being used as templates
-    :param bias: constant term to be added (currently 0: Todo)
+    :param bias: constant term to be added (currently 0)
     :return: prediction
     """
     predicted_lc = np.zeros_like(PCs.shape[1])
@@ -27,7 +27,7 @@ def calc_loss(coeff, PCs, light_curve_seg, bias=None):
     :param coeff: current value of coefficients
     :param PCs: principal components to the used for the prediction
     :param light_curve_seg: segment of lightcurve that is to be predicted
-    :param bias: constant to be added to the fit [currently none ToDo]
+    :param bias: constant to be added to the fit [currently none]
     :return: loss that is to be optimized
     """
     index = light_curve_seg != 0
@@ -59,8 +59,6 @@ def get_pcs(num_pc_components, bands, path=None, decouple_pc_bands=False, band_c
         pc_out = {0: pc_dict['u'][0:num_pc_components], 1: pc_dict['r'][0:num_pc_components],
                   2: pc_dict['i'][0:num_pc_components], 3: pc_dict['g'][0:num_pc_components],
                   4: pc_dict['z'][0:num_pc_components], 5: pc_dict['Y'][0:num_pc_components]}
-        # num_pc_components = int(num_pc_components)
-        # print(pc_dict['u'])
 
     else:
         pc_out = {}
@@ -101,14 +99,12 @@ class PredictLightCurve:
 
     def get_time_segment(self, start_date, end_date):
         """
-        extracts a time segment (TODO: use function already defined in LightCurve class)
+        extracts a time segment
         :param start_date: start date of the extracted slice
         :param end_date:  end date of the extracted slice
         :return: data of the time segment before start and end date
         """
-        start_index = self.lc.df[self.lc.time_col_name] >= start_date
-        end_index = self.lc.df[self.lc.time_col_name] <= end_date
-        return self.lc.df[start_index & end_index]
+        return self.lc.get_time_sliced_df(start_date, end_date)
 
     def get_binned_time(self, df):
         """
