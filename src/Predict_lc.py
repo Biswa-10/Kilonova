@@ -4,41 +4,6 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
 
-def calc_prediction(coeff, PCs, bias=None):
-    """
-    given the coefficients and PCs, it calculates the prediction as a linear combination
-
-    :param coeff: coefficients of the linear combinations for the PCs
-    :param PCs: The PCs that are being used as templates
-    :param bias: constant term to be added (currently 0)
-    :return: prediction
-    """
-    predicted_lc = np.zeros_like(PCs.shape[1])
-    for a, b in zip(PCs, coeff): predicted_lc = np.add(predicted_lc, b * a)
-    if bias is not None:
-        predicted_lc = predicted_lc + bias
-    return predicted_lc
-
-
-def calc_loss(coeff, PCs, light_curve_seg, bias=None):
-    """
-    function to calculate the loss to be optimized
-
-    :param coeff: current value of coefficients
-    :param PCs: principal components to the used for the prediction
-    :param light_curve_seg: segment of lightcurve that is to be predicted
-    :param bias: constant to be added to the fit [currently none]
-    :return: loss that is to be optimized
-    """
-    index = light_curve_seg != 0
-    y_pred = calc_prediction(coeff, PCs, bias=bias)
-    diff = light_curve_seg - y_pred
-    neg_index = y_pred < 0
-    diff = diff[index | neg_index]
-    error = np.sum(np.square(diff, diff))
-    return error
-
-
 def get_pcs(num_pc_components, bands, path=None, decouple_pc_bands=False, band_choice='u'):
     """
     load PCs
@@ -76,6 +41,41 @@ def get_pcs(num_pc_components, bands, path=None, decouple_pc_bands=False, band_c
     return pc_out
 
 
+def calc_prediction(coeff, PCs, bias=None):
+    """
+    given the coefficients and PCs, it calculates the prediction as a linear combination
+
+    :param coeff: coefficients of the linear combinations for the PCs
+    :param PCs: The PCs that are being used as templates
+    :param bias: constant term to be added (currently 0)
+    :return: prediction
+    """
+    predicted_lc = np.zeros_like(PCs.shape[1])
+    for a, b in zip(PCs, coeff): predicted_lc = np.add(predicted_lc, b * a)
+    if bias is not None:
+        predicted_lc = predicted_lc + bias
+    return predicted_lc
+
+
+def calc_loss(coeff, PCs, light_curve_seg, bias=None):
+    """
+    function to calculate the loss to be optimized
+
+    :param coeff: current value of coefficients
+    :param PCs: principal components to the used for the prediction
+    :param light_curve_seg: segment of lightcurve that is to be predicted
+    :param bias: constant to be added to the fit [currently none]
+    :return: loss that is to be optimized
+    """
+    index = light_curve_seg != 0
+    y_pred = calc_prediction(coeff, PCs, bias=bias)
+    diff = light_curve_seg - y_pred
+    neg_index = y_pred < 0
+    diff = diff[index | neg_index]
+    error = np.sum(np.square(diff, diff))
+    return error
+
+
 class PredictLightCurve:
 
     def __init__(self, data_ob, object_id, num_pc_components=3):
@@ -84,9 +84,8 @@ class PredictLightCurve:
         self.current_date = None
         self.num_pc_components = num_pc_components
         self.bands = None
-        self.pcs = None
         self.decouple_prediction_bands = True
-
+        self.pcs = None
         self.min_flux_threshold = 0
         self.num_prediction_days = 51
         self.mid_point_dict = None
@@ -243,7 +242,7 @@ class PredictLightCurve:
 
         return self.lc.df[upper_time_lim_index & lower_time_lim_index]
 
-    def predict_lc_coeff(self, num_pc_components, bands, decouple_pc_bands, decouple_prediction_bands,
+    def predict_lc_coeff(self, num_pc_components, bands, pcs, decouple_pc_bands, decouple_prediction_bands,
                          min_flux_threshold, current_date=None, template_path=None, band_choice='u',
                          num_alert_days=None):
         """
@@ -267,8 +266,7 @@ class PredictLightCurve:
         self.current_date = current_date
         self.num_pc_components = num_pc_components
         self.bands = bands
-        self.pcs = get_pcs(num_pc_components, bands=self.bands, path=template_path, decouple_pc_bands=decouple_pc_bands,
-                           band_choice=band_choice)
+        self.pcs = pcs
         self.decouple_prediction_bands = decouple_prediction_bands
 
         self.min_flux_threshold = min_flux_threshold

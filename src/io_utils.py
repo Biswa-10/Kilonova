@@ -1,8 +1,10 @@
 from src.dataframe import Data
 from astropy.table import Table, vstack
-from random import random
 import numpy as np
 from pathlib import Path
+
+
+
 
 def ztf_ob_type_name(type_no: int):
     if type_no == 141:
@@ -54,9 +56,10 @@ def ztf_ob_type_name(type_no: int):
     if type_no == 0:
         return '0: Unknown'
 
-def load_ztf_data(
-        phot_path='/media/biswajit/drive/Kilonova_datasets/ZTF_20190512/ZTF_MSIP_MODEL64/ZTF_MSIP_NONIaMODEL0-0001_PHOT.FITS',
-        drop_separators=True):
+
+def load_ztf_data(phot_path=
+                  '/media/biswajit/drive/Kilonova_datasets/ZTF_20190512/ZTF_MSIP_MODEL64/ZTF_MSIP_NONIaMODEL0-0001_PHOT.FITS',
+                  drop_separators=True):
     """
     functions to load ztf data
 

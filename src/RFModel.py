@@ -1,6 +1,5 @@
 from sklearn.ensemble import RandomForestClassifier
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from src.dataframe import Data
 from src.Predict_lc import PredictLightCurve, calc_prediction, get_pcs
@@ -59,7 +58,7 @@ def sample_from_df(data_df, sample_numbers=None, shuffle=False):
 
 class RFModel:
 
-    def __init__(self, prediction_type_nos, sample_numbers_train=None,
+    def __init__(self, prediction_type_nos, pcs=None, sample_numbers_train=None,
                  sample_numbers_test=None, decouple_prediction_bands=True, decouple_pc_bands=False,
                  min_flux_threshold=200, num_pc_components=3, use_random_current_date=False, bands=None,
                  band_choice='u', num_alert_days=None, skip_random_date_event_types=None, train_features_path=None,
@@ -68,6 +67,7 @@ class RFModel:
         creates a pandas dataframe with the features.
         Note that this function makes predictions and plots for all the data!
         :param prediction_type_nos: list with the type numbers to be identified
+        :param pcs: pcs to be used for predictions
         :param train_features_path: if the train features are already calculated, pass path to the saved features
         :param test_features_path: if the test features are already calculated, pass path to the saved features
         :param sample_numbers_train: dict value that stores the number of events to be sampled in training set
@@ -76,7 +76,8 @@ class RFModel:
                 corresponding to each type
         :param decouple_prediction_bands: if True (recommended) each band will have its own midpoint. If False, the date
            of mid point will be the same for all bands
-        :param decouple_pc_bands: use different sets of PCs for different bands (should be used only for LSST data)
+        :param decouple_pc_bands: use different sets of PCs for different bands (should be used only for LSST data,
+            only in the case when default function is used)
         :param min_flux_threshold: minimum value of the amplitude necessary to make predictions
         :param num_pc_components: number of PC components to be used
         :param use_random_current_date: Try to mimic alerts by choosing selecting data only upto a specific date for
@@ -96,6 +97,7 @@ class RFModel:
         else:
             self.prediction_type_nos = prediction_type_nos
             self.prediction_type_nos.sort()
+
         self.train_features_df = None
         self.test_features_df = None
         self.classifier = RandomForestClassifier(n_estimators=30, max_depth=13)
@@ -113,6 +115,12 @@ class RFModel:
         self.classifier_trained = False
         self.use_number_of_points_per_band = False
         self.performance_statistics_df = None
+        if pcs is None:
+            self.pcs = get_pcs(self.num_pc_components, self.bands, decouple_pc_bands=self.decouple_pc_bands,
+                               band_choice=self.band_choice)
+        else:
+            self.pcs = pcs
+            print("done")
 
     def create_features_df(self, data_set: str, data_ob: Data = None, discard_no_feature_events=True):
         """
@@ -165,7 +173,7 @@ class RFModel:
                                                                decouple_pc_bands=self.decouple_pc_bands,
                                                                decouple_prediction_bands=self.decouple_prediction_bands,
                                                                min_flux_threshold=self.min_flux_threshold,
-                                                               bands=self.bands,
+                                                               bands=self.bands, pcs=self.pcs,
                                                                band_choice=self.band_choice,
                                                                num_alert_days=self.num_alert_days)
                 data_dict['id'].append(object_id)
@@ -291,9 +299,7 @@ class RFModel:
             made for all events
         :param save_fig_path: path in which the plots are to be saved. If left None, plots are not saved
         """
-        # TODO: pass PCs to PredictLightCurve
-        pcs = get_pcs(num_pc_components=self.num_pc_components, bands=self.bands, decouple_pc_bands=False,
-                      band_choice='u')
+
         if not self.classifier_trained:
             print("train classifer and predict_test_data func")
             # todo: what to do if test_data is not called before
@@ -338,7 +344,7 @@ class RFModel:
                             band_feature_col = str(i) + 'pc' + str(j + 1)
                             coeff_list.append(row[band_feature_col])
 
-                        predicted_lc = calc_prediction(coeff_list, pcs[band])
+                        predicted_lc = calc_prediction(coeff_list, self.pcs[band])
                         time_data = np.arange(mid_point - 50, mid_point + 52, 2)
                         ax = fig.gca()
                         ax.plot(time_data, predicted_lc, color=color_band_dict[band], label="band " + str(band) +
@@ -444,7 +450,8 @@ class RFModel:
                                   x_limits=None, y_limits=None, mark_xlabel=True, mark_ylabel=True, band_map=None,
                                   set_ax_title=True):
         """
-        plots correlations between the PCs of each band
+        plots correlations between the PCs of each band (with the training set features)
+
         :param class_features_df: dataframe of events of current class (KN and non-KN)
         :param bands: bands for which plots are to be generated
         :param color_band_dict:test colors to be used for corresponding bands
@@ -456,8 +463,8 @@ class RFModel:
         :param set_ax_title: title of the axes ojbect on which plot is made
         :return: figure with the plots
         """
-        kn_df = self.features_df[self.features_df['y_true'] == 1]
-        non_kn_df = self.features_df[self.features_df['y_true'] == 0]
+        kn_df = self.train_features_df[self.train_features_df['y_true'] == 1]
+        non_kn_df = self.train_features_df[self.train_features_df['y_true'] == 0]
         if bands is None:
             bands = self.bands
         num_rows = len(bands)
@@ -537,7 +544,8 @@ class RFModel:
     def plot_band_correlation(self, bands=None, color_band_dict=None, x_limits=None,
                               y_limits=None, mark_xlabel=True, mark_ylabel=True, band_map=None, set_ax_title=True):
         """
-        plots correlations between 2 bands for each PC
+        plots correlations between 2 bands for each PC (with the training set features)
+
         :param bands: bands among which correlation is to be plotted
         :param color_band_dict: colors to be used for corresponding bands
         :param fig: fig on which plot is generated. If None, new fig is created
@@ -551,8 +559,8 @@ class RFModel:
         """
         if bands is None:
             bands = self.bands
-        kn_df = self.features_df[self.features_df['y_true'] == 1]
-        non_kn_df = self.features_df[self.features_df['y_true'] == 0]
+        kn_df = self.train_features_df[self.train_features_df['y_true'] == 1]
+        non_kn_df = self.train_features_df[self.train_features_df['y_true'] == 0]
         num_rows = int(len(bands) * (len(bands) - 1) / 2)
         num_cols = self.num_pc_components
         space_between_axes = 0.0
@@ -707,7 +715,7 @@ class RFModel:
         ax.set_ylabel('True label', fontsize=20)
 
         # Rotate the tick labels and set their alignment.
-        ax.setp(ax.get_xticklabels(), rotation=0, ha="right",
+        plt.setp(ax.get_xticklabels(), rotation=0, ha="right",
                  rotation_mode="anchor")
 
         # Loop over data dimensions and create text annotations.
@@ -762,22 +770,23 @@ class RFModel:
         if ax is None:
             fig = plt.figure(figsize=(5, 5))
             ax = fig.gca()
+        print(roc_auc)
         ax.plot(fpr, tpr, 'b', label='AUC = %0.2f' % roc_auc)
 
-        ax.title('Receiver Operating Characteristic')
+        ax.set_title('Receiver Operating Characteristic')
         ax.legend(loc='lower right')
         # plt.plot([0, 1], [0, 1],'r--')
 
-        ax.ylim([0, 1])
-        ax.xlim([0, 1])
+        ax.set_ylim([0, 1])
+        ax.set_xlim([0, 1])
         # plt.axis("square")
-        ax.ylabel('True Positive Rate', fontsize=20)
-        ax.xlabel('False Positive Rate', fontsize=20)
+        plt.ylabel('True Positive Rate', fontsize=20)
+        plt.xlabel('False Positive Rate', fontsize=20)
         # plt.gca().set_aspect("equal")
 
     def prediction_type_names(self):
         """
-        :return: for each type number, returns the name TODO:?????
+        :return: for each type number, returns the name
         """
         name = ""
         for type_no in self.prediction_type_nos:
