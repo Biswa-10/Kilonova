@@ -280,7 +280,7 @@ class RFModel:
         else:
             print("Please train classifier first")
 
-        return self.test_features_df[['id', 'y_pred', 'y-score']]
+        return self.test_features_df[['id', 'y_pred', 'y_score']]
 
     def plot_prediction(self, color_band_dict=None, plot_predicted_curve_of_type=None, save_fig_path=None):
         """
