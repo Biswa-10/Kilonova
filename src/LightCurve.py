@@ -308,7 +308,7 @@ class LightCurve:
         plots the region of light curve where most of the band maximums are located.
 
         :param color_band_dict: mapping from band/filter name to color with which it is to be drawn
-        :param event_days_range: size of bin in which the maximum fluxes of most bands should lie (Todo: atleast 2?)
+        :param event_days_range: size of bin in which the maximum fluxes of most bands should lie
         :param plot_points: mark the recorded data points on the curve
         :param band: bands for which plots are to be drawn
         :param mark_label: to put label or not

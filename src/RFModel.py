@@ -241,7 +241,7 @@ class RFModel:
 
         return col_names
 
-    def train_model(self, use_number_of_points_per_band=False) -> pd.DataFrame:
+    def train_model(self, use_number_of_points_per_band=False):
         """
         function to train the classifier model
 
@@ -251,7 +251,7 @@ class RFModel:
 
         if self.train_features_df is None:
             print("create training features")
-            # TODO: handle case properly
+            return
         self.use_number_of_points_per_band = use_number_of_points_per_band
         col_names = self.get_features_col_names()
 
@@ -268,7 +268,7 @@ class RFModel:
 
         return self.train_features_df[['id', 'y_pred']]
 
-    def predict_test_data(self) -> pd.DataFrame:
+    def predict_test_data(self):
         """
         function to predict probability and score for the test data
 
@@ -276,7 +276,7 @@ class RFModel:
         """
         if self.test_features_df is None:
             print("create test features")
-            # TODO: handle case properly
+            return
         col_names = self.get_features_col_names()
         features = self.test_features_df[col_names]
         if self.classifier_trained:
@@ -301,7 +301,6 @@ class RFModel:
 
         if not self.classifier_trained:
             print("train classifer and predict_test_data func")
-            # todo: what to do if test_data is not called before
             return
 
         if color_band_dict is None:
@@ -337,7 +336,6 @@ class RFModel:
                         if math.isnan(mid_point):
                             continue
                         mid_point = mid_point - mid_point % 2
-                        print(mid_point)
                         prediction = True
                         for j in range(self.num_pc_components):
                             band_feature_col = str(i) + 'pc' + str(j + 1)
@@ -374,8 +372,6 @@ class RFModel:
                                               mark_label=True, plot_points=True, label_postfix="light curve")
                     plt.legend(fontsize=15)
                     if prediction and (save_fig_path is not None):
-                        # todo: fix bug when passing none
-
                         if not correct_pred:
                             fig.savefig(
                                 save_fig_path + "incorrect/" + str(object_type) + "_" + str(int(object_id)) + ".png")
@@ -407,29 +403,38 @@ class RFModel:
         num_rows = len(self.bands)
         num_cols = int(self.num_pc_components * (self.num_pc_components - 1) / 2)
         if fig is None:
-            fig, axs = plt.subplots(num_rows, num_cols, figsize=(self.num_pc_components * 5, len(self.bands) * 5))
+            fig, axs = plt.subplots(num_rows, num_cols, figsize=(num_rows * 5, num_cols * 5))
             # fig.subplots_adjust(wspace=.5,hspace=.5)
             ax_list = fig.axes
         else:
             ax_list = fig.axes
-        if self.bands is None:
-            bands = self.band_map.keys()
+        if bands is None:
+            bands = self.bands
+        print(bands)
         for i, band in enumerate(bands):
+            print("i = "+str(i))
+            print(band)
             for x in range(self.num_pc_components):
                 for y in range(x):
+                    print(x)
+                    print(y)
                     ax_current = ax_list[int(i * num_cols + (x - 1) * (x) / 2 + y)]
                     colx_name = str(i) + "pc" + str(x + 1)
                     coly_name = str(i) + "pc" + str(y + 1)
-                    if mark_xlabel: ax_current.set_xlabel("PC" + str(x + 1), fontsize=20)
-                    if mark_ylabel: ax_current.set_ylabel("PC" + str(y + 1), fontsize=20)
+                    if mark_xlabel:
+                        ax_current.set_xlabel("PC" + str(x + 1), fontsize=20)
+                    if mark_ylabel:
+                        ax_current.set_ylabel("PC" + str(y + 1), fontsize=20)
                     PCx = class_features_df[colx_name].values
                     PCy = class_features_df[coly_name].values
                     if color_band_dict is not None:
                         ax_current.scatter(PCx, PCy, color=color_band_dict[band], alpha=.5, label=label)
                     else:
-                        # TODO: change the yellow
                         ax_current.scatter(PCx, PCy, color="yellow", alpha=.4, label=label)
                     if x_limits is not None:
+                        print("-----------------------")
+                        print(x)
+                        print(y)
                         ax_current.set_xlim(x_limits)
                     if y_limits is not None:
                         ax_current.set_ylim(y_limits)
@@ -441,6 +446,7 @@ class RFModel:
                     if label != "":
                         ax_current.legend(loc="upper right")
                     ax_current.set_aspect('equal', 'box')
+                    #ax_current.axis('square')
         fig.tight_layout()
         return fig
 
@@ -467,6 +473,9 @@ class RFModel:
             bands = self.bands
         num_rows = len(bands)
         num_cols = int(self.num_pc_components * (self.num_pc_components - 1) / 2)
+        print(num_rows)
+        print(num_cols)
+        print(self.bands)
         fig, axs = plt.subplots(num_rows, num_cols, figsize=(self.num_pc_components * 5, len(bands) * 5))
         # fig.subplots_adjust(wspace=.5,hspace=.5)
         self.plot_features_correlation_helper(non_kn_df, fig=fig, band_map=band_map,
@@ -524,18 +533,25 @@ class RFModel:
                         ax_current.scatter(PCx, PCy, color=color_band_dict[band], alpha=.5, label=label)
                     else:
                         ax_current.scatter(PCx, PCy, color="yellow", alpha=.4, label=label)
-                    if x_limits is not None: ax_current.set_xlim(x_limits)
-                    if y_limits is not None: ax_current.set_ylim(y_limits)
+                    if x_limits is not None:
+                        ax_current.set_xlim(x_limits)
+                    if y_limits is not None:
+                        ax_current.set_ylim(y_limits)
                     if band_map is None:
-                        if mark_xlabel: ax_current.set_xlabel(x_band + " band", fontsize=20)
-                        if mark_ylabel: ax_current.set_ylabel(y_band + " band", fontsize=20)
+                        if mark_xlabel:
+                            ax_current.set_xlabel(x_band + " band", fontsize=20)
+                        if mark_ylabel:
+                            ax_current.set_ylabel(y_band + " band", fontsize=20)
                     else:
-                        if mark_xlabel: ax_current.set_xlabel(band_map[x_band] + " band", fontsize=20)
-                        if mark_ylabel: ax_current.set_ylabel(band_map[y_band] + " band", fontsize=20)
-                    if set_ax_title: ax_current.set_title("correlation for PC" + str(i + 1), fontsize=20)
+                        if mark_xlabel:
+                            ax_current.set_xlabel(band_map[x_band] + " band", fontsize=20)
+                        if mark_ylabel:
+                            ax_current.set_ylabel(band_map[y_band] + " band", fontsize=20)
+                    if set_ax_title:
+                        ax_current.set_title("correlation for PC" + str(i + 1), fontsize=20)
                     if label != "":
                         ax_current.legend(loc="upper right")
-                    ax_current.set_aspect('equal', 'box')
+                    #ax_current.set_aspect('equal', 'box')
         fig.tight_layout()
         return fig
 
