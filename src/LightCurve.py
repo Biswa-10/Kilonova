@@ -12,6 +12,7 @@ class LightCurve:
 
     extracts data of a light curve from an object with a given object id, of Data class
     """
+
     def __init__(self, data_ob, object_id):
 
         self.df = Table()
@@ -141,12 +142,13 @@ class LightCurve:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
                                     color=color_band_dict[band],
-                                    label= pb_name + " " + label_postfix if mark_label else "", fmt='o',
+                                    label=pb_name + " " + label_postfix if mark_label else "", fmt='o',
                                     alpha=alpha)
                     else:
                         ax.errorbar(df_plot_data[self.time_col_name], df_plot_data[self.brightness_col_name],
                                     df_plot_data[self.brightness_err_col_name],
-                                    color=color_band_dict[band], label= + pb_name + " " + label_postfix if mark_label else "",
+                                    color=color_band_dict[band],
+                                    label=+ pb_name + " " + label_postfix if mark_label else "",
                                     alpha=alpha)
 
                 if mark_maximum:
@@ -173,13 +175,12 @@ class LightCurve:
 
         return fig
 
-    def get_time_sliced_df(self, start_date=None, end_date=None, current_date=None):
+    def get_time_sliced_df(self, start_date=None, end_date=None):
         """
-        gets time sliced data between start date and end date (TODO: current date required?)
+        gets time sliced data between start date and end date
 
         :param start_date: start date of the slice to be extracted
         :param end_date: end date of the slice to be extracted
-        :param current_date: todo: ???
         :return: time sliced data
         """
         event_df = self.df
@@ -191,11 +192,7 @@ class LightCurve:
             end_date = np.amax(event_df[self.time_col_name])
         start_index = event_df[self.time_col_name] >= start_date
         end_index = event_df[self.time_col_name] <= end_date
-        if current_date is None:
-            return event_df[start_index & end_index]
-        else:
-            past_index = event_df[self.time_col_name] <= current_date
-            return event_df[start_index & end_index & past_index]
+        return event_df[start_index & end_index]
 
     def extract_band_data(self, band, event_df=None):
         """
